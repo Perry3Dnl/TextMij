@@ -19,11 +19,11 @@
         <nav class="desktop-navigation" aria-label="Hoofdnavigatie"></nav>
         <div class="sidebar-bottom">
           <div class="free-note"><span class="tiny-dot"></span>Gewoon gratis. Altijd.</div>
-          <a class="profile-link" href="#instellingen"><span class="avatar profile-avatar" data-profile-initial>R</span><span><strong data-profile-name>Robin</strong><small>Persoonlijk profiel</small></span><span class="profile-chevron" aria-hidden="true">›</span></a>
+          <button class="profile-link" type="button" data-action="switch-account" aria-label="Wissel van account"><span class="avatar profile-avatar" data-profile-initial>R</span><span><strong data-profile-name>Robin</strong><small data-profile-role>Persoonlijk profiel</small></span><span class="profile-chevron" aria-hidden="true">⌃</span></button>
         </div>
       </aside>
       <div class="workspace">
-        <header class="mobile-header"><a class="brand" href="#home"><img src="/icon.svg" width="29" height="29" alt=""><span>TextMij<span class="brand-dot">.</span></span></a><span class="preview-pill"><span></span>Voorbeeldmodus</span></header>
+        <header class="mobile-header"><a class="brand" href="#home"><img src="/icon.svg" width="29" height="29" alt=""><span>TextMij<span class="brand-dot">.</span></span></a><button class="mode-switch" type="button" data-action="switch-account" aria-label="Wissel van account"><span data-mode-icon></span><span data-mode-label>Persoonlijk</span><span aria-hidden="true">⌄</span></button></header>
         <main id="main" tabindex="-1"></main>
         <nav class="mobile-navigation" aria-label="Hoofdnavigatie"></nav>
       </div>

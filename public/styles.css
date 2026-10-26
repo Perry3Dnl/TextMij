@@ -15,7 +15,7 @@
 .sidebar-bottom { margin-top: auto; }
 .free-note { display: flex; align-items: center; gap: 7px; color: #687460; padding: 24px 13px; font-size: 12px; }
 .tiny-dot { width: 5px; height: 5px; border-radius: 50%; background: #6f9d6b; flex-shrink: 0; }
-.profile-link { display: flex; align-items: center; gap: 10px; padding: 17px 10px 1px; border-top: 1px solid var(--line); color: var(--ink); text-decoration: none; }
+.profile-link { display: flex; align-items: center; gap: 10px; width: 100%; padding: 17px 10px 8px; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--ink); text-decoration: none; text-align: left; cursor: pointer; }
 .profile-link strong, .profile-link small { display: block; }
 .profile-link > span:nth-child(2) { min-width: 0; }
 .profile-link strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -159,16 +159,20 @@ h1 { overflow-wrap: anywhere; }
 .date-label { text-align: center; margin: 10px 0 22px; font-size: 11px; color: #687460; }
 .message { display: flex; align-items: flex-end; gap: 9px; margin-bottom: 15px; }
 .message .avatar { width: 24px; height: 24px; border-radius: 7px; font-size: 15px; margin-bottom: 3px; }
-.message.customer { justify-content: flex-end; margin-left: 38px; }
-.message.business { margin-right: 38px; }
+.message.outgoing { justify-content: flex-end; margin-left: 38px; }
+.message.incoming { margin-right: 38px; }
 .message-body { max-width: 420px; min-width: 90px; background: white; border: 1px solid #e9eee3; border-radius: 13px 13px 13px 4px; padding: 16px 17px 10px; }
-.message.customer .message-body { background: var(--chat-tint); border-color: #e0e9d9; color: var(--chat-ink); border-radius: 13px 13px 4px 13px; }
+.message.outgoing .message-body { background: var(--chat-tint); border-color: #e0e9d9; color: var(--chat-ink); border-radius: 13px 13px 4px 13px; }
 .message-title { font-size: 14px; font-weight: 630; margin: 0 0 9px; line-height: 1.5; }
 .message-text { font-size: 13px; line-height: 1.9; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .message-meta { display: flex; justify-content: flex-end; align-items: center; gap: 5px; font-size: 10px; line-height: 1.5; color: #687460; margin-top: 9px; }
 .message-meta svg { width: 11px; height: 11px; }
 .composer-wrap { flex-shrink: 0; padding: 17px 23px 12px; border-top: 1px solid var(--line); background: #fff; }
-.composer { display: flex; align-items: flex-end; gap: 10px; }
+.composer { display: flex; flex-direction: column; gap: 10px; }
+.composer-row { display: flex; align-items: flex-end; gap: 10px; width: 100%; }
+.composer-row textarea { min-width: 0; flex: 1; }
+.message-title-input { width: 100%; }
+.send-button { flex-shrink: 0; }
 .composer textarea { width: 100%; min-height: 43px; max-height: 140px; resize: none; border: 1px solid #e8ece2; border-radius: 11px; padding: 13px 15px; font-size: 13px; line-height: 1.5; color: var(--ink); background: #fafcf7; outline: none; }
 .composer textarea:focus { border-color: #a9ba9b; box-shadow: 0 0 0 3px #4e835309; }
 .composer textarea[aria-invalid='true'] { border-color: #cd9c91; }
@@ -188,6 +192,40 @@ h1 { overflow-wrap: anywhere; }
 .dialog-business { display: flex; gap: 14px; align-items: center; margin-bottom: 20px; }
 .dialog-business h2 { margin: 0; font-size: 18px; }
 .dialog-business small { color: var(--muted); font-size: 12px; display: block; margin-top: 6px; }
+.mode-switch { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); background: white; color: var(--ink); border-radius: 10px; padding: 9px 10px; font-size: 12px; cursor: pointer; }
+.mode-switch [data-mode-icon] { display: flex; }
+.mode-switch svg { width: 15px; height: 15px; }
+.account-choices { display: grid; gap: 10px; margin: 20px 0; }
+.account-choice { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: white; border: 1px solid var(--line); border-radius: 12px; padding: 15px 13px; color: var(--ink); cursor: pointer; }
+.account-choice:hover, .account-choice.selected { background: var(--green-light); border-color: #b6c6ab; }
+.account-choice-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: #f0f3ec; color: var(--green); flex-shrink: 0; }
+.account-choice-copy { min-width: 0; flex: 1; }
+.account-choice strong, .account-choice small { display: block; overflow-wrap: anywhere; }
+.account-choice strong { font-size: 14px; font-weight: 600; }
+.account-choice small { margin-top: 5px; font-size: 12px; color: var(--muted); }
+.account-choice > svg { color: var(--green); flex-shrink: 0; }
+.app-dialog .dialog-note { font-size: 12px; }
+.business-identity { display: flex; gap: 15px; align-items: center; margin: 29px 0 22px; }
+.business-mark { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: #e7eee2; color: var(--green); flex-shrink: 0; }
+.business-mark svg { width: 25px; height: 25px; }
+.business-identity > div { min-width: 0; }
+.business-identity h2 { font-size: 23px; font-weight: 600; margin: 0 0 7px; overflow-wrap: anywhere; }
+.business-identity p { font-size: 13px; color: var(--muted); margin: 0; overflow-wrap: anywhere; }
+.plain-button { padding: 0; border: 0; background: none; cursor: pointer; text-align: left; }
+.switch-info { margin-top: 19px; }
+.inbox-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.inbox-actions .button { white-space: nowrap; }
+.inbox-toolbar .search-field { min-width: 0; }
+.extra-field { margin-top: 20px; }
+.optional-label { color: var(--muted); font-weight: 400; }
+.spaced-actions { margin-top: 25px; flex-wrap: wrap; }
+.code-input { text-transform: uppercase; letter-spacing: 1px; }
+.thread-empty { text-align: center; color: var(--muted); margin: 70px auto; font-size: 14px; line-height: 1.8; }
+.thread-empty > svg { width: 32px; height: 32px; color: #91a384; }
+.thread-empty h2 { color: var(--ink); font-size: 18px; font-weight: 600; }
+.chat-identity { min-width: 0; }
+.chat-business-name, .chat-business-detail { overflow-wrap: anywhere; }
+.message-title { overflow-wrap: anywhere; }
 
 @media (min-width: 1500px) {
   main { padding-top: 56px; }
@@ -289,8 +327,8 @@ h1 { overflow-wrap: anywhere; }
   .message-body { padding: 14px 14px 9px; max-width: 100%; }
   .message-title { font-size: 14px; }
   .message-text { font-size: 14px; line-height: 1.8; }
-  .message.business { margin-right: 14px; }
-  .message.customer { margin-left: 40px; }
+  .message.incoming { margin-right: 14px; }
+  .message.outgoing { margin-left: 40px; }
   .message .avatar { display: none; }
   .message-meta { font-size: 10px; }
   .composer-wrap { padding: 14px 16px calc(10px + env(safe-area-inset-bottom)); }
