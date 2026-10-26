@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -59,6 +60,9 @@ class DeploymentTests(unittest.TestCase):
             (app / "current").symlink_to(previous)
         binaries = base / "bin"
         binaries.mkdir()
+        # Use this interpreter directly, including when the developer's PATH
+        # contains a slow runtime launcher instead of the Python executable.
+        (binaries / "python3").symlink_to(sys.executable)
         for name, content in {"docker": DOCKER, "curl": CURL, "sleep": "#!/bin/sh\nexit 0\n"}.items():
             target = binaries / name
             target.write_text(content)
@@ -69,7 +73,7 @@ class DeploymentTests(unittest.TestCase):
             env={**os.environ, "PATH": f"{binaries}:{os.environ['PATH']}",
                  "SHARED_CADDYFILE": str(caddyfile), "SHARED_CADDY_CONTAINER": "dummy-stock-caddy",
                  "SHARED_PROXY_NETWORK": "dummy-stock-simulator_default", "FAKE_FAILURE": failure, "FAKE_LOG": str(log)},
-            capture_output=True, text=True, timeout=20,
+            capture_output=True, text=True, timeout=60,
         )
         commands = [json.loads(line) for line in log.read_text().splitlines()]
         return result, app, release, caddyfile, original, previous, commands
