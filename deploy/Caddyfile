@@ -1,0 +1,8 @@
+# --- textmij (managed by TextMij deployment) ---
+__TEXTMIJ_DOMAIN__ {
+	encode gzip
+	header X-Content-Type-Options nosniff
+	header Referrer-Policy strict-origin-when-cross-origin
+	reverse_proxy __TEXTMIJ_UPSTREAM__:3000
+}
+# --- end textmij ---

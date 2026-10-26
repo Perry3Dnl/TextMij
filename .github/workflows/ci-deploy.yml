@@ -1,0 +1,111 @@
+name: Test and deploy
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: textmij-${{ github.workflow }}-${{ github.ref }}
+  # Let production finish switching/rolling back before another release starts.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - name: Check syntax and run HTTP tests
+        run: |
+          npm run check
+          npm test
+      - name: Test Caddy edits and deployment failure recovery
+        run: python3 -m unittest discover -s tests -v
+      - name: Check deployment shell scripts
+        run: |
+          bash -n deploy/ship.sh deploy/activate.sh
+          shellcheck deploy/ship.sh deploy/activate.sh
+
+  image:
+    name: Container smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Build the deployment image
+        run: docker build --build-arg "APP_REVISION=$GITHUB_SHA" --tag "textmij:$GITHUB_SHA" .
+      - name: Verify health and web entry point in the hardened container
+        shell: bash
+        run: |
+          set -euo pipefail
+          trap 'docker logs textmij-smoke; docker rm -f textmij-smoke' EXIT
+          docker run -d --name textmij-smoke --read-only --tmpfs /tmp \
+            --cap-drop ALL --security-opt no-new-privileges:true "textmij:$GITHUB_SHA"
+          for attempt in $(seq 1 40); do
+            state="$(docker inspect --format '{{.State.Health.Status}}' textmij-smoke)"
+            [ "$state" != healthy ] || break
+            sleep 2
+          done
+          [ "$state" = healthy ]
+          docker exec textmij-smoke node -e "Promise.all([fetch('http://127.0.0.1:3000/'),fetch('http://127.0.0.1:3000/api/health')]).then(async ([web,health])=>{const b=await health.json();if(!web.ok||!health.ok||b.revision!==process.env.APP_REVISION||!(await web.text()).includes('TextMij'))process.exit(1)}).catch(()=>process.exit(1))"
+      - name: Package the tested image and the exact source revision
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          mkdir -p "$RUNNER_TEMP/textmij-release"
+          docker save "textmij:$GITHUB_SHA" | gzip >"$RUNNER_TEMP/textmij-release/image.tar.gz"
+          git archive --format=tar.gz --output="$RUNNER_TEMP/textmij-release/source.tar.gz" "$GITHUB_SHA"
+      - name: Store deployment bundle
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: textmij-${{ github.sha }}
+          path: ${{ runner.temp }}/textmij-release/*.tar.gz
+          if-no-files-found: error
+          retention-days: 3
+
+  deploy:
+    name: Deploy production
+    needs: [tests, image]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+      DEPLOY_HOST_KEY_FINGERPRINT: ${{ vars.DEPLOY_HOST_KEY_FINGERPRINT }}
+      TEXTMIJ_DOMAIN: ${{ vars.TEXTMIJ_DOMAIN }}
+      DEPLOY_APP_DIR: ${{ vars.DEPLOY_APP_DIR || '/opt/textmij' }}
+      SHARED_PROXY_NETWORK: ${{ vars.SHARED_PROXY_NETWORK || 'dummy-stock-simulator_default' }}
+      SHARED_CADDY_CONTAINER: ${{ vars.SHARED_CADDY_CONTAINER || 'dummy-stock-caddy' }}
+      SHARED_CADDYFILE: ${{ vars.SHARED_CADDYFILE || '/opt/dummy-stock-simulator/deploy/Caddyfile' }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: textmij-${{ github.sha }}
+          path: ${{ runner.temp }}/textmij-release
+      - name: Install SSH password helper
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends sshpass
+      - name: Upload and activate the tested release
+        run: bash deploy/ship.sh "$RUNNER_TEMP/textmij-release"
