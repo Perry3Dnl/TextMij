@@ -37,6 +37,10 @@ class CaddyTests(unittest.TestCase):
             with self.subTest(domain=domain), self.assertRaises(ValueError):
                 caddy.render(domain, "textmij-api-abc")
 
+    def test_upstream_must_fit_a_dns_label(self):
+        with self.assertRaises(ValueError):
+            caddy.render("textmij.example.com", "textmij-api-" + "a" * 54)
+
     def test_rollback_preserves_other_projects_new_changes_and_inode(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "Caddyfile"
