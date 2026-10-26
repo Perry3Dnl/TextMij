@@ -46,7 +46,7 @@ class DeploymentTests(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         base = Path(temporary.name)
         app = base / "textmij"
-        release = app / "releases" / f"{REVISION}-123-1"
+        release = app / "releases" / f"{REVISION}-40340723565-1"
         release.mkdir(parents=True)
         shutil.copytree(ROOT / "deploy", release / "deploy")
         caddyfile = base / "Caddyfile"
@@ -83,7 +83,9 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual((app / "current").resolve(), release)
         self.assertTrue(caddyfile.read_text().startswith(OTHER))
-        self.assertIn(f"textmij-api-{release.name}:3000", caddyfile.read_text())
+        candidate = (release / ".container").read_text().strip()
+        self.assertLessEqual(len(candidate), 63)
+        self.assertIn(f"{candidate}:3000", caddyfile.read_text())
         self.assertIn(["stop", "--time", "20", OLD], commands)
         self.assertFalse(any(command[:2] == ["rm", "-f"] for command in commands))
         self.assertFalse(any("restart" in command or "prune" in command for command in commands))
@@ -93,7 +95,10 @@ class DeploymentTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(caddyfile.read_text(), original)
         self.assertEqual((app / "current").resolve(), previous)
-        self.assertIn(["rm", "-f", f"textmij-api-{release.name}"], commands)
+        removed = [command[2] for command in commands if command[:2] == ["rm", "-f"]]
+        self.assertEqual(len(removed), 1)
+        self.assertTrue(removed[0].startswith("textmij-api-"))
+        self.assertNotEqual(removed[0], OLD)
         self.assertFalse(any(command[0] == "stop" for command in commands))
 
     def test_invalid_caddy_config_rolls_back_without_stopping_old_container(self):

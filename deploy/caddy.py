@@ -41,7 +41,7 @@ def replace(text, replacement):
 def render(domain, upstream):
     if not DOMAIN.fullmatch(domain):
         raise ValueError("TEXTMIJ_DOMAIN must be a single DNS hostname without a scheme or path")
-    if not re.fullmatch(r"textmij-api-[a-z0-9-]+", upstream):
+    if len(upstream) > 63 or not re.fullmatch(r"textmij-api-[a-z0-9-]+", upstream):
         raise ValueError("Invalid TextMij upstream container name")
     template = Path(__file__).with_name("Caddyfile").read_text()
     return template.replace("__TEXTMIJ_DOMAIN__", domain).replace("__TEXTMIJ_UPSTREAM__", upstream).strip()

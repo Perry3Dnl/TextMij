@@ -35,8 +35,8 @@ jobs:
         run: python3 -m unittest discover -s tests -v
       - name: Check deployment shell scripts
         run: |
-          bash -n deploy/ship.sh deploy/activate.sh
-          shellcheck deploy/ship.sh deploy/activate.sh
+          for script in deploy/*.sh; do bash -n "$script"; done
+          shellcheck deploy/*.sh
 
   image:
     name: Container smoke test
@@ -54,16 +54,8 @@ jobs:
           python3 -c 'import sys; sys.path.insert(0,"deploy"); import caddy; print(caddy.render("textmij.example.com","textmij-api-smoke"))' >"$RUNNER_TEMP/TextMij.Caddyfile"
           docker run --rm -v "$RUNNER_TEMP/TextMij.Caddyfile:/etc/caddy/Caddyfile:ro" \
             caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
-      - name: Verify health and web entry point in the hardened container
-        shell: bash
-        run: |
-          set -euo pipefail
-          export SHARED_PROXY_NETWORK=textmij-ci
-          export TEXTMIJ_CONTAINER=textmij-api-smoke TEXTMIJ_IMAGE="textmij:$GITHUB_SHA"
-          trap 'docker logs textmij-api-smoke; docker rm -f textmij-api-smoke; docker network rm textmij-ci' EXIT
-          docker network create textmij-ci
-          docker compose -p textmij-ci -f deploy/compose.yml up -d --no-build --wait --wait-timeout 120
-          docker exec textmij-api-smoke node -e "Promise.all([fetch('http://127.0.0.1:3000/'),fetch('http://127.0.0.1:3000/api/health')]).then(async ([web,health])=>{const b=await health.json();if(!web.ok||!health.ok||b.revision!==process.env.APP_REVISION||!(await web.text()).includes('TextMij'))process.exit(1)}).catch(()=>process.exit(1))"
+      - name: Verify Compose deployment and live Caddy reverse proxy
+        run: bash deploy/smoke.sh
       - name: Package the tested image and the exact source revision
         run: |
           mkdir -p "$RUNNER_TEMP/textmij-release"

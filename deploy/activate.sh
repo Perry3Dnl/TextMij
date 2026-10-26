@@ -15,7 +15,8 @@ export SHARED_PROXY_NETWORK="${SHARED_PROXY_NETWORK:-dummy-stock-simulator_defau
 caddy_container="${SHARED_CADDY_CONTAINER:-dummy-stock-caddy}"
 caddyfile="${SHARED_CADDYFILE:-/opt/dummy-stock-simulator/deploy/Caddyfile}"
 export TEXTMIJ_IMAGE="textmij:$revision"
-export TEXTMIJ_CONTAINER="textmij-api-$release_id"
+TEXTMIJ_CONTAINER="$(python3 "$release_dir/deploy/names.py" "$release_id")"
+export TEXTMIJ_CONTAINER
 compose=(docker compose -p "textmij-$release_id" -f "$release_dir/deploy/compose.yml")
 backup="$release_dir/.caddy-rollback.json"
 candidate_started=false
@@ -66,6 +67,11 @@ candidate_started=true
 "${compose[@]}" up -d --no-build --wait --wait-timeout 120
 docker exec "$TEXTMIJ_CONTAINER" node -e \
   "fetch('http://127.0.0.1:3000/api/health').then(async r=>{const b=await r.json();process.exit(r.ok&&b.service==='textmij'&&b.revision===process.env.APP_REVISION?0:1)}).catch(()=>process.exit(1))"
+# Verify Docker DNS and reachability from Caddy's actual network namespace
+# before updating any public routing. The tested app image supplies Node.
+docker run --rm --read-only --cap-drop ALL --security-opt no-new-privileges:true \
+  --network "container:$caddy_container" --entrypoint node "$TEXTMIJ_IMAGE" -e \
+  "fetch('http://$TEXTMIJ_CONTAINER:3000/api/health').then(async r=>{const b=await r.json();process.exit(r.ok&&b.service==='textmij'&&b.revision===process.env.APP_REVISION?0:1)}).catch(e=>{console.error(e.message);process.exit(1)})"
 
 # Keep this lock until activation/rollback has completed. It serializes TextMij
 # Caddy edits; other projects retain ownership of their own blocks.
@@ -79,15 +85,19 @@ docker exec "$caddy_container" caddy reload --config /etc/caddy/Caddyfile
 healthy=false
 for attempt in $(seq 1 30); do
   echo "Checking public TextMij health ($attempt/30)"
-  if curl --fail --silent --show-error --connect-timeout 5 --max-time 10 \
-    "https://$domain/api/health" \
-    | python3 -c 'import json,sys; b=json.load(sys.stdin); sys.exit(0 if b.get("status")=="ok" and b.get("service")=="textmij" and b.get("revision")==sys.argv[1] else 1)' "$revision"; then
+  if body="$(curl --fail --silent --show-error --connect-timeout 5 --max-time 10 "https://$domain/api/health")" \
+    && printf '%s' "$body" | python3 -c 'import json,sys; b=json.load(sys.stdin); sys.exit(0 if b.get("status")=="ok" and b.get("service")=="textmij" and b.get("revision")==sys.argv[1] else 1)' "$revision"; then
     healthy=true
     break
   fi
   sleep 2
 done
-[ "$healthy" = true ] || { echo 'Public health check failed' >&2; exit 1; }
+if [ "$healthy" != true ]; then
+  echo 'Public health check failed; relevant Caddy diagnostics:' >&2
+  docker logs --since 2m --tail 100 "$caddy_container" 2>&1 \
+    | grep -F -e "$domain" -e "$TEXTMIJ_CONTAINER" >&2 || true
+  exit 1
+fi
 
 printf '%s\n' "$TEXTMIJ_CONTAINER" >"$release_dir/.container"
 if [ -L "$app_dir/current" ]; then
