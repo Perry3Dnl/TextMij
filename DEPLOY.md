@@ -19,14 +19,14 @@ This matches the password-based SSH deployment currently used by MetElkaarOnline
 
 | Name | Required | Value/default |
 | --- | --- | --- |
-| `TEXTMIJ_DOMAIN` | Yes | The chosen TextMij hostname, e.g. `messages.your-domain.com`. Hostname only, without `https://` or a path. No domain has been assumed or configured. |
+| `TEXTMIJ_DOMAIN` | No | Defaults to `textmij.perry3d.nl`. Override only when changing the hostname; use a hostname without `https://` or a path. |
 | `DEPLOY_HOST_KEY_FINGERPRINT` | No | Defaults to the existing shared server's Ed25519 fingerprint, matching MetElkaarOnline. Set this only when deploying to a different server or after a verified host-key change. |
 | `DEPLOY_APP_DIR` | No | `/opt/textmij` |
 | `SHARED_PROXY_NETWORK` | No | `dummy-stock-simulator_default` |
 | `SHARED_CADDY_CONTAINER` | No | `dummy-stock-caddy` |
 | `SHARED_CADDYFILE` | No | `/opt/dummy-stock-simulator/deploy/Caddyfile` |
 
-No fingerprint variable needs to be added for the existing shared server. If an override becomes necessary, verify the Ed25519 fingerprint through the provider console or another trusted channel. On the server it can be read with:
+No Actions variables need to be added for the existing shared server and `textmij.perry3d.nl`. If a fingerprint override becomes necessary, verify it through the provider console or another trusted channel. On the server it can be read with:
 
 ```sh
 ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub -E sha256
@@ -42,7 +42,7 @@ Create a GitHub environment named `production` if you want to configure it befor
 - Password-based SSH access, as used by the reference repository.
 - The deployment user can use Docker, create/write `/opt/textmij`, and update the shared Caddyfile and an adjacent lock file. There is no interactive `sudo` in the remote deployment.
 - The existing Caddy container is running, is attached to `dummy-stock-simulator_default`, and reads `/etc/caddy/Caddyfile` from the configured host Caddyfile.
-- The chosen hostname resolves to this server. Configure the DNS A record, and an AAAA record only if the server's IPv6 is working. Existing Caddy owns ports 80/443 and handles HTTPS.
+- `textmij.perry3d.nl` (or the overridden hostname) resolves to this server. Configure the DNS A record, and an AAAA record only if the server's IPv6 is working. Existing Caddy owns ports 80/443 and handles HTTPS.
 - Sufficient disk space for the image archive, loaded image, and retained release directories.
 
 The deployment does not create another reverse proxy or publish TextMij's port on the host. It joins the existing external Docker network, following MetElkaarOnline's shared-proxy setup. Other repositories and live server files were inspected through the reference repository only; no server changes have been applied while preparing this setup.
