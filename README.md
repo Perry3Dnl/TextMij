@@ -17,15 +17,19 @@ Device IDs are public delivery addresses, not authentication credentials. The fu
 
 ## Current implementation
 
-This repository currently contains the deployment foundation, not the messaging product:
+This repository contains the deployment foundation and the first responsive web client:
 
-- A dependency-free Node.js 24 HTTP server and a placeholder web entry point.
+- A dependency-free Node.js 24 HTTP server and a light Dutch interface for desktop and phone.
+- Home with an example device code, a searchable company inbox, settings, and a chat view.
+- Working local example replies, unread state, per-conversation mute preferences, profile editing, and settings persistence.
+- A UTF-8-aware 1 KB customer reply limit, with independent business/customer limit settings in the client model.
+- Company-theme variables scoped to the chat panel, keeping the rest of the app neutral.
 - `GET /api/health` reports service status and the running Git revision.
 - A non-root Docker container and production Compose configuration.
 - PR tests, container smoke tests, and automatic production deployment after successful checks on `main`.
 - Shared-Caddy routing with health checks and failure recovery.
 
-Registration, message storage, messaging endpoints, business authentication, push notifications, and the mobile shell are still to be implemented.
+The interface is explicitly a **preview**: company conversations and the code are examples, and replies are stored in this browser only. Real device registration, server-side message storage, messaging endpoints, business authentication, push notifications, and the mobile shell are still to be implemented. Preview codes are not real delivery addresses.
 
 ## Local development
 
@@ -33,10 +37,11 @@ With Node.js 24 and Python 3 installed:
 
 ```sh
 npm start
+npm run dev
 npm test
 python3 -m unittest discover -s tests -v
 ```
 
-The web entry point is at `http://localhost:3000` and health is at `http://localhost:3000/api/health`. No npm dependencies need to be installed.
+The web entry point is at `http://localhost:3000` and health is at `http://localhost:3000/api/health`. Use either `npm start` for the server or `npm run dev` to restart it automatically when source changes. No npm dependencies need to be installed.
 
 See [DEPLOY.md](DEPLOY.md) for GitHub secrets, variables, shared-server prerequisites, and the deployment flow.

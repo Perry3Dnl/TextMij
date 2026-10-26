@@ -6,8 +6,9 @@
   "description": "Free business-to-customer messaging through a REST API and a lightweight client.",
   "engines": { "node": ">=24 <25" },
   "scripts": {
+    "dev": "node --watch --watch-path=src --watch-path=public src/server.js",
     "start": "node src/server.js",
     "test": "node --test",
-    "check": "node --check src/server.js && node --check src/app.js"
+    "check": "node --check src/server.js && node --check src/app.js && node --check public/app.js && node --check public/model.js"
   }
 }

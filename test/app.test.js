@@ -21,7 +21,18 @@ test('HTTP deployment contract', async (t) => {
     const response = await fetch(origin);
     assert.equal(response.status, 200);
     assert.match(response.headers.get('content-type'), /text\/html/);
-    assert.match(await response.text(), /<h1>TextMij<\/h1>/);
+    assert.match(await response.text(), /<title>TextMij/);
+    assert.match(response.headers.get('content-security-policy'), /script-src 'self'/);
+  });
+  await t.test('client assets have correct MIME types and cannot read arbitrary files', async () => {
+    for (const [path, type] of [['/styles.css', 'text/css'], ['/base.css', 'text/css'], ['/app.js', 'text/javascript'], ['/model.js', 'text/javascript'], ['/icon.svg', 'image/svg+xml']]) {
+      const response = await fetch(`${origin}${path}`);
+      assert.equal(response.status, 200, path);
+      assert.ok(response.headers.get('content-type').startsWith(type), path);
+      assert.ok((await response.text()).length > 0, path);
+    }
+    assert.equal((await fetch(`${origin}/package.json`)).status, 404);
+    assert.equal((await fetch(`${origin}/src/app.js`)).status, 404);
   });
   await t.test('HEAD returns headers without a response body', async () => {
     const response = await fetch(`${origin}/api/health`, { method: 'HEAD' });
