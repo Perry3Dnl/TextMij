@@ -1,11 +1,35 @@
 <!doctype html>
-<html lang="en">
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TextMij</title>
-  <main>
-    <h1>TextMij</h1>
-    <p>Free messaging between businesses and their customers.</p>
-    <p>TextMij is under development. Messaging and registration are not available yet.</p>
-  </main>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+    <meta name="theme-color" content="#f7f8f5">
+    <meta name="description" content="TextMij brengt berichten van bedrijven samen in één rustige inbox. Gratis, zonder telefoonnummer.">
+    <title>TextMij — jouw berichten, zonder de ruis</title>
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/styles.css">
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Ga naar de inhoud</a>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Zijbalk">
+        <a class="brand" href="#home" aria-label="TextMij home"><img src="/icon.svg" width="34" height="34" alt=""><span>TextMij<span class="brand-dot">.</span></span></a>
+        <div class="sidebar-label">JOUW OMGEVING</div>
+        <nav class="desktop-navigation" aria-label="Hoofdnavigatie"></nav>
+        <div class="sidebar-bottom">
+          <div class="free-note"><span class="tiny-dot"></span>Gewoon gratis. Altijd.</div>
+          <a class="profile-link" href="#instellingen"><span class="avatar profile-avatar" data-profile-initial>R</span><span><strong data-profile-name>Robin</strong><small>Persoonlijk profiel</small></span><span class="profile-chevron" aria-hidden="true">›</span></a>
+        </div>
+      </aside>
+      <div class="workspace">
+        <header class="mobile-header"><a class="brand" href="#home"><img src="/icon.svg" width="29" height="29" alt=""><span>TextMij<span class="brand-dot">.</span></span></a><span class="preview-pill"><span></span>Voorbeeldmodus</span></header>
+        <main id="main" tabindex="-1"></main>
+        <nav class="mobile-navigation" aria-label="Hoofdnavigatie"></nav>
+      </div>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <dialog id="app-dialog" class="app-dialog"></dialog>
+    <noscript><p>Schakel JavaScript in om de TextMij-interface te gebruiken.</p></noscript>
+  </body>
 </html>

@@ -1,0 +1,16 @@
+:root { color-scheme: light; --white: #fff; --canvas: #f7f8f5; --ink: #303a2b; --muted: #66725e; --green: #3f7358; --green-light: #edf3e9; --line: #e9ece3; font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-synthesis: none; -webkit-font-smoothing: antialiased; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--canvas); color: var(--ink); }
+button, input, textarea { font: inherit; }
+button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
+button, a { touch-action: manipulation; }
+button { -webkit-appearance: none; }
+button:focus-visible, a:focus-visible { outline: 2px solid #6c9560; outline-offset: 4px; }
+button:disabled { cursor: default; }
+svg { display: block; }
+a { color: inherit; }
+::selection { background: #dcead4; color: #304527; }
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.skip-link { position: fixed; z-index: 100; top: -60px; left: 16px; padding: 12px 18px; border-radius: 10px; background: var(--green); color: white; font-size: 13px; }
+.skip-link:focus { top: 14px; }
