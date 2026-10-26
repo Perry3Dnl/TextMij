@@ -1,0 +1,25 @@
+services:
+  api:
+    image: ${TEXTMIJ_IMAGE:?Required tested image}
+    container_name: ${TEXTMIJ_CONTAINER:?Required release container}
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    expose:
+      - "3000"
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true
+    name: ${SHARED_PROXY_NETWORK:-dummy-stock-simulator_default}

@@ -1,0 +1,123 @@
+name: Test and deploy
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: textmij-${{ github.workflow }}-${{ github.ref }}
+  # Let production finish switching/rolling back before another release starts.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Check syntax and run HTTP tests
+        run: |
+          npm run check
+          npm test
+      - name: Test Caddy edits and deployment failure recovery
+        run: python3 -m unittest discover -s tests -v
+      - name: Check deployment shell scripts
+        run: |
+          bash -n deploy/ship.sh deploy/activate.sh
+          shellcheck deploy/ship.sh deploy/activate.sh
+
+  image:
+    name: Container smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build the deployment image
+        run: docker build --build-arg "APP_REVISION=$GITHUB_SHA" --tag "textmij:$GITHUB_SHA" .
+      - name: Validate the rendered Caddy route
+        shell: bash
+        run: |
+          python3 -c 'import sys; sys.path.insert(0,"deploy"); import caddy; print(caddy.render("textmij.example.com","textmij-api-smoke"))' >"$RUNNER_TEMP/TextMij.Caddyfile"
+          docker run --rm -v "$RUNNER_TEMP/TextMij.Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
+      - name: Verify health and web entry point in the hardened container
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SHARED_PROXY_NETWORK=textmij-ci
+          export TEXTMIJ_CONTAINER=textmij-api-smoke TEXTMIJ_IMAGE="textmij:$GITHUB_SHA"
+          trap 'docker logs textmij-api-smoke; docker rm -f textmij-api-smoke; docker network rm textmij-ci' EXIT
+          docker network create textmij-ci
+          docker compose -p textmij-ci -f deploy/compose.yml up -d --no-build --wait --wait-timeout 120
+          docker exec textmij-api-smoke node -e "Promise.all([fetch('http://127.0.0.1:3000/'),fetch('http://127.0.0.1:3000/api/health')]).then(async ([web,health])=>{const b=await health.json();if(!web.ok||!health.ok||b.revision!==process.env.APP_REVISION||!(await web.text()).includes('TextMij'))process.exit(1)}).catch(()=>process.exit(1))"
+      - name: Package the tested image and the exact source revision
+        run: |
+          mkdir -p "$RUNNER_TEMP/textmij-release"
+          docker save "textmij:$GITHUB_SHA" | gzip >"$RUNNER_TEMP/textmij-release/image.tar.gz"
+          git archive --format=tar.gz --output="$RUNNER_TEMP/textmij-release/source.tar.gz" "$GITHUB_SHA"
+      - name: Store deployment bundle
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: textmij-${{ github.sha }}
+          path: ${{ runner.temp }}/textmij-release/*.tar.gz
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 0
+          overwrite: true
+      - name: Verify deployment bundle download
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: textmij-${{ github.sha }}
+          path: ${{ runner.temp }}/textmij-verified
+      - name: Verify transferred image and source match the tested revision
+        run: |
+          cmp "$RUNNER_TEMP/textmij-release/image.tar.gz" "$RUNNER_TEMP/textmij-verified/image.tar.gz"
+          cmp "$RUNNER_TEMP/textmij-release/source.tar.gz" "$RUNNER_TEMP/textmij-verified/source.tar.gz"
+
+  deploy:
+    name: Deploy production
+    needs: [tests, image]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+      # Same shared-server default as MetElkaarOnline; override only if it changes.
+      DEPLOY_HOST_KEY_FINGERPRINT: ${{ vars.DEPLOY_HOST_KEY_FINGERPRINT || 'SHA256:Vq5Cic1/9iZsNAXfG9GQlnOjciecd6V9BPLGV5X2ExE' }}
+      TEXTMIJ_DOMAIN: ${{ vars.TEXTMIJ_DOMAIN || 'textmij.perry3d.nl' }}
+      DEPLOY_APP_DIR: ${{ vars.DEPLOY_APP_DIR || '/opt/textmij' }}
+      SHARED_PROXY_NETWORK: ${{ vars.SHARED_PROXY_NETWORK || 'dummy-stock-simulator_default' }}
+      SHARED_CADDY_CONTAINER: ${{ vars.SHARED_CADDY_CONTAINER || 'dummy-stock-caddy' }}
+      SHARED_CADDYFILE: ${{ vars.SHARED_CADDYFILE || '/opt/dummy-stock-simulator/deploy/Caddyfile' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: textmij-${{ github.sha }}
+          path: ${{ runner.temp }}/textmij-release
+      - name: Install SSH password helper
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends sshpass
+      - name: Upload and activate the tested release
+        run: bash deploy/ship.sh "$RUNNER_TEMP/textmij-release"
