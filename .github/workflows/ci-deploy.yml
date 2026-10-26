@@ -100,7 +100,8 @@ jobs:
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
       DEPLOY_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
       DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
-      DEPLOY_HOST_KEY_FINGERPRINT: ${{ vars.DEPLOY_HOST_KEY_FINGERPRINT }}
+      # Same shared-server default as MetElkaarOnline; override only if it changes.
+      DEPLOY_HOST_KEY_FINGERPRINT: ${{ vars.DEPLOY_HOST_KEY_FINGERPRINT || 'SHA256:Vq5Cic1/9iZsNAXfG9GQlnOjciecd6V9BPLGV5X2ExE' }}
       TEXTMIJ_DOMAIN: ${{ vars.TEXTMIJ_DOMAIN }}
       DEPLOY_APP_DIR: ${{ vars.DEPLOY_APP_DIR || '/opt/textmij' }}
       SHARED_PROXY_NETWORK: ${{ vars.SHARED_PROXY_NETWORK || 'dummy-stock-simulator_default' }}

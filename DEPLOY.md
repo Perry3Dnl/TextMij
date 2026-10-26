@@ -20,13 +20,13 @@ This matches the password-based SSH deployment currently used by MetElkaarOnline
 | Name | Required | Value/default |
 | --- | --- | --- |
 | `TEXTMIJ_DOMAIN` | Yes | The chosen TextMij hostname, e.g. `messages.your-domain.com`. Hostname only, without `https://` or a path. No domain has been assumed or configured. |
-| `DEPLOY_HOST_KEY_FINGERPRINT` | Yes | Trusted SHA256 fingerprint of the server's **Ed25519** SSH host key. Verify it through the provider console or another trusted channel. |
+| `DEPLOY_HOST_KEY_FINGERPRINT` | No | Defaults to the existing shared server's Ed25519 fingerprint, matching MetElkaarOnline. Set this only when deploying to a different server or after a verified host-key change. |
 | `DEPLOY_APP_DIR` | No | `/opt/textmij` |
 | `SHARED_PROXY_NETWORK` | No | `dummy-stock-simulator_default` |
 | `SHARED_CADDY_CONTAINER` | No | `dummy-stock-caddy` |
 | `SHARED_CADDYFILE` | No | `/opt/dummy-stock-simulator/deploy/Caddyfile` |
 
-On the server, the Ed25519 fingerprint can be read with:
+No fingerprint variable needs to be added for the existing shared server. If an override becomes necessary, verify the Ed25519 fingerprint through the provider console or another trusted channel. On the server it can be read with:
 
 ```sh
 ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub -E sha256
