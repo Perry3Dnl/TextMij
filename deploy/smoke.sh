@@ -26,13 +26,13 @@ sys.path.insert(0, 'deploy')
 import caddy
 print(caddy.render('textmij.example.com', sys.argv[1]).replace('textmij.example.com {', 'http://textmij.example.com {'))
 PY
-docker run -d --name textmij-ci-caddy --network textmij-ci \
+docker run -d --name textmij-ci-caddy --network textmij-ci --network-alias textmij.example.com \
   -v "$RUNNER_TEMP/TextMij.proxy.Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine
 docker exec "$TEXTMIJ_CONTAINER" node --input-type=module -e '
   for (let attempt = 0; attempt < 20; attempt++) {
     try {
-      const response = await fetch("http://textmij-ci-caddy/api/health", {
-        headers: { Host: "textmij.example.com" }, signal: AbortSignal.timeout(3000)
+      const response = await fetch("http://textmij.example.com/api/health", {
+        signal: AbortSignal.timeout(3000)
       });
       const body = await response.json();
       if (!response.ok || body.service !== "textmij" || body.revision !== process.env.APP_REVISION) {
