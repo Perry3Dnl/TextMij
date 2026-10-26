@@ -22,7 +22,11 @@ This repository contains the deployment foundation and the first responsive web 
 - A dependency-free Node.js 24 HTTP server and a light Dutch interface for desktop and phone.
 - Home with an example device code, a searchable company inbox, settings, and a chat view.
 - Working local example replies, unread state, per-conversation mute preferences, profile editing, and settings persistence.
-- A UTF-8-aware 1 KB customer reply limit, with independent business/customer limit settings in the client model.
+- An account switcher on desktop and phone, using the same layout for personal and business profiles. The selected profile persists across reloads.
+- Business Home, customer conversations, editable business name/email, and a new-conversation form accepting a customer code. Reusing a code opens the existing conversation.
+- Local business messages with a required title and content; outgoing messages appear on the right in either role. The example personal profile is a customer of the example business, allowing the same exchange to be viewed from both sides. Other customer conversations remain in the business inbox.
+- Separate unread state, mute preferences, and in-memory message drafts per role. Notification preferences apply to the device across both profiles.
+- UTF-8-aware 1 KB limits for customer replies and business title/content combined, independently configurable in `public/model.js`.
 - Company-theme variables scoped to the chat panel, keeping the rest of the app neutral.
 - `GET /api/health` reports service status and the running Git revision.
 - A non-root Docker container and production Compose configuration.
