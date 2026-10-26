@@ -78,6 +78,7 @@ docker exec "$caddy_container" caddy reload --config /etc/caddy/Caddyfile
 
 healthy=false
 for attempt in $(seq 1 30); do
+  echo "Checking public TextMij health ($attempt/30)"
   if curl --fail --silent --show-error --connect-timeout 5 --max-time 10 \
     "https://$domain/api/health" \
     | python3 -c 'import json,sys; b=json.load(sys.stdin); sys.exit(0 if b.get("status")=="ok" and b.get("service")=="textmij" and b.get("revision")==sys.argv[1] else 1)' "$revision"; then

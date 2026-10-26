@@ -38,7 +38,7 @@ Create a GitHub environment named `production` if you want to configure it befor
 
 ## Shared-server prerequisites
 
-- Linux with Docker Engine, Docker Compose v2 with `up --wait`, Bash, Python 3, `flock`, `curl`, and `tar`.
+- An x86-64 Linux server with Docker Engine, Docker Compose v2 with `up --wait`, Bash, Python 3, `flock`, `curl`, and `tar`. The image is built and tested on GitHub's x86-64 Ubuntu runner; an ARM server needs an ARM runner/build configuration first.
 - Password-based SSH access, as used by the reference repository.
 - The deployment user can use Docker, create/write `/opt/textmij`, and update the shared Caddyfile and an adjacent lock file. There is no interactive `sudo` in the remote deployment.
 - The existing Caddy container is running, is attached to `dummy-stock-simulator_default`, and reads `/etc/caddy/Caddyfile` from the configured host Caddyfile.

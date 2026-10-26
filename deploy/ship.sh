@@ -18,8 +18,10 @@ SHARED_CADDYFILE="${SHARED_CADDYFILE:-/opt/dummy-stock-simulator/deploy/Caddyfil
 
 [[ "$DEPLOY_HOST" =~ ^[A-Za-z0-9][A-Za-z0-9.:-]*$ ]] || { echo 'Invalid deployment host' >&2; exit 1; }
 [[ "$DEPLOY_USER" =~ ^[A-Za-z_][A-Za-z0-9._-]*$ ]] || { echo 'Invalid deployment user' >&2; exit 1; }
-[[ "$DEPLOY_PORT" =~ ^[0-9]{1,5}$ ]] && ((10#$DEPLOY_PORT >= 1 && 10#$DEPLOY_PORT <= 65535)) \
-  || { echo 'Invalid SSH port' >&2; exit 1; }
+if ! [[ "$DEPLOY_PORT" =~ ^[0-9]{1,5}$ ]] || ((10#$DEPLOY_PORT < 1 || 10#$DEPLOY_PORT > 65535)); then
+  echo 'Invalid SSH port' >&2
+  exit 1
+fi
 [[ "$DEPLOY_APP_DIR" =~ ^/opt/[A-Za-z0-9_-][A-Za-z0-9_/-]*$ && "$DEPLOY_APP_DIR" != *//* ]] \
   || { echo 'Application directory must be a safe path below /opt' >&2; exit 1; }
 [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ && "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]] \
@@ -43,7 +45,7 @@ actual="$(ssh-keygen -lf "$ssh_dir/known_hosts" -E sha256 | awk 'NR == 1 {print 
 [ "$actual" = "$DEPLOY_HOST_KEY_FINGERPRINT" ] \
   || { echo 'SSH host fingerprint does not match the pinned server' >&2; exit 1; }
 
-ssh_options=(-o BatchMode=no -o PubkeyAuthentication=no -o PreferredAuthentications=password,keyboard-interactive
+ssh_options=(-o BatchMode=no -o PubkeyAuthentication=no -o 'PreferredAuthentications=password,keyboard-interactive'
   -o NumberOfPasswordPrompts=1 -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$ssh_dir/known_hosts" -o ConnectTimeout=15)
 remote="$DEPLOY_USER@$DEPLOY_HOST"
 release_id="$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
