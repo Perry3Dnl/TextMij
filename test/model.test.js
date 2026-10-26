@@ -144,7 +144,7 @@ test('customer codes create one business conversation and existing codes reopen 
 test('business profile, role, customers and role-specific preferences survive reloads', () => {
   const state = freshState();
   state.mode = 'business';
-  state.business = { name: 'Klein Atelier', email: 'hallo@atelier.example' };
+  state.business = { name: 'Klein Atelier', email: 'hallo@atelier.example', demoVerification: 'inactive' };
   const { id } = addCustomer(state, '9876-ABC-DEF', 'Alex');
   state.mutedBusiness.push(id);
   markRead(state, 'customer-sam');
