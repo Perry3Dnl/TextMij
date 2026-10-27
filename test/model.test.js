@@ -144,7 +144,7 @@ test('customer codes create one business conversation and existing codes reopen 
 test('business profile, role, customers and role-specific preferences survive reloads', () => {
   const state = freshState();
   state.mode = 'business';
-  state.business = { name: 'Klein Atelier', email: 'hallo@atelier.example', demoVerification: 'inactive', theme: 'white', customTheme: { accent: '#245c91', tint: '#e5f1fc', ink: '#173e65', background: '#ffffff', foreground: '#263326' } };
+  state.business = { name: 'Klein Atelier', email: 'hallo@atelier.example', demoVerification: 'inactive', profile: {description:'',phone:'',website:'',socials:{instagram:'',facebook:'',linkedin:''},hours:{Maandag:'',Dinsdag:'',Woensdag:'',Donderdag:'',Vrijdag:'',Zaterdag:'',Zondag:''},actions:[],logo:''}, theme: 'white', customTheme: { accent: '#245c91', tint: '#e5f1fc', ink: '#173e65', background: '#ffffff', foreground: '#263326' } };
   const { id } = addCustomer(state, '9876-ABC-DEF', 'Alex');
   state.mutedBusiness.push(id);
   markRead(state, 'customer-sam');
@@ -240,4 +240,19 @@ test('full business UI themes expose valid contrasting backgrounds and preserve 
     assert.notEqual(palette.background,palette.foreground);
     assert.deepEqual(businessThemeFor(state,'fietsatelier','personal'), BUSINESS_THEMES.white);
   }
+});
+
+test('company profile validates external links and persists optional public fields', async () => {
+  const { cleanBusinessProfile, safeExternalUrl } = await import('../public/model.js');
+  assert.equal(safeExternalUrl('javascript:alert(1)'), '');
+  assert.equal(safeExternalUrl('http://example.com'), '');
+  assert.equal(safeExternalUrl('https://user:pass@example.com'), '');
+  const profile=cleanBusinessProfile({description:'Garage onderhoud',phone:'+31 45 123 4567',website:'https://garage.example/afspraak',hours:{Maandag:'09:00–17:00'},actions:[{label:'Afspraak maken',url:'https://garage.example/afspraak'},{label:'Onveilig',url:'javascript:alert(1)'}],socials:{instagram:'https://instagram.com/example'},logo:'data:image/png;base64,aGVsbG8='});
+  assert.equal(profile.actions.length,1);
+  assert.equal(profile.website,'https://garage.example/afspraak');
+  assert.equal(profile.hours.Maandag,'09:00–17:00');
+  assert.equal(profile.actions[0].label,'Afspraak maken');
+  assert.equal(profile.logo,'data:image/png;base64,aGVsbG8=');
+  const state=freshState();state.business.profile=profile;
+  assert.deepEqual(restoreState(JSON.stringify(state)).business.profile,profile);
 });
