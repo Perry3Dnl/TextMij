@@ -258,7 +258,7 @@ function renderChat(id) {
   }
   markRead(state, id); persist(false);
   const muted = mutedChats().includes(id);
-  main.innerHTML = `<section class="chat-panel" style="${themeStyle(businessThemeFor(state, id))}" aria-label="Gesprek met ${html(business.name)}" data-company-id="${id}"><header class="chat-header"><a class="icon-button chat-back" href="#gesprekken" aria-label="Terug naar gesprekken">${icon('back')}</a>${avatar(business)}<div class="chat-identity"><h1 class="chat-business-name">${!isBusiness() && id === 'studio-noord' ? `<a class="company-chat-link" href="#bedrijf/${id}">${html(business.name)}</a>` : html(business.name)}${!isBusiness() && id === 'studio-noord' ? verificationLabel() : ''}</h1><span class="chat-business-detail">${html(business.category)}</span></div><div class="chat-header-actions"><button class="icon-button" data-action="switch-account" aria-label="Wissel van account in dit gesprek">${icon(isBusiness() ? 'business' : 'person')}</button><button class="icon-button" data-action="mute-chat" data-id="${id}" aria-label="${muted ? 'Meldingen voor dit gesprek aanzetten' : 'Meldingen voor dit gesprek uitzetten'}" aria-pressed="${muted}">${icon(muted ? 'bellOff' : 'bell')}</button><button class="icon-button" data-action="business-info" data-id="${id}" aria-label="Over ${html(business.name)}">${icon('info')}</button></div></header><div class="chat-demo-strip">${isBusiness() ? `Zakelijk · ${html(state.business.name)} · ` : ''}Voorbeeldgesprek · berichten blijven lokaal</div><div class="thread" id="message-thread" role="log" aria-label="Berichten" aria-live="off"></div><div class="composer-wrap"><form class="composer" id="reply-form" data-id="${id}">${isBusiness() ? `<label class="sr-only" for="message-title">Titel van het bericht</label><input class="text-input message-title-input" id="message-title" placeholder="Titel van je bericht…" value="${html(titleDrafts.get(draftKey(id)) || '')}" aria-describedby="composer-help reply-error" required>` : ''}<div class="composer-row"><label class="sr-only" for="reply">${isBusiness() ? 'Inhoud van het bericht' : 'Je reactie'}</label><textarea id="reply" rows="1" placeholder="${isBusiness() ? 'Schrijf je update…' : 'Schrijf een bericht…'}" enterkeyhint="send" aria-describedby="composer-help reply-error">${html(drafts.get(draftKey(id)) || '')}</textarea><button class="button send-button" type="submit" aria-label="${isBusiness() ? 'Bedrijfsbericht lokaal bewaren' : 'Reactie lokaal bewaren'}" disabled>${icon('send')}</button></div></form><div class="composer-help" id="composer-help"><span>${isBusiness() ? 'Titel en inhoud samen · Alleen lokaal bewaard' : 'Alleen lokaal bewaard'} <span class="desktop-hint">· Enter om te versturen</span></span><span class="byte-count" id="byte-count"></span></div><p class="composer-error" id="reply-error" role="alert" hidden></p></div></section>`;
+  main.innerHTML = `<section class="chat-panel" style="${themeStyle(businessThemeFor(state, id))}" aria-label="Gesprek met ${html(business.name)}" data-company-id="${id}"><header class="chat-header"><a class="icon-button chat-back" href="#gesprekken" aria-label="Terug naar gesprekken">${icon('back')}</a>${avatar(business)}<div class="chat-identity"><h1 class="chat-business-name">${!isBusiness() && id === 'studio-noord' ? `<a class="company-chat-link" href="#bedrijf/${id}">${html(business.name)}</a>` : html(business.name)}${!isBusiness() && id === 'studio-noord' ? verificationLabel() : ''}</h1><span class="chat-business-detail">${html(business.category)}</span></div><div class="chat-header-actions"><button class="icon-button" data-action="switch-account" aria-label="Wissel van account in dit gesprek">${icon(isBusiness() ? 'business' : 'person')}</button><button class="icon-button" data-action="mute-chat" data-id="${id}" aria-label="${muted ? 'Meldingen voor dit gesprek aanzetten' : 'Meldingen voor dit gesprek uitzetten'}" aria-pressed="${muted}">${icon(muted ? 'bellOff' : 'bell')}</button><button class="icon-button" data-action="business-info" data-id="${id}" aria-label="Over ${html(business.name)}">${icon('info')}</button></div></header><div class="chat-demo-strip">${isBusiness() ? `Zakelijk · ${html(state.business.name)} · ` : ''}Voorbeeldgesprek · berichten blijven lokaal</div><div class="thread" id="message-thread" role="log" aria-label="Berichten" aria-live="off"></div><div class="composer-wrap"><form class="composer" id="reply-form" data-id="${id}"><div class="composer-row"><label class="sr-only" for="reply">${isBusiness() ? 'Inhoud van het bericht' : 'Je reactie'}</label><textarea id="reply" rows="1" placeholder="${'Schrijf een bericht…'}" enterkeyhint="send" aria-describedby="composer-help reply-error">${html(drafts.get(draftKey(id)) || '')}</textarea><button class="button send-button" type="submit" aria-label="${isBusiness() ? 'Bedrijfsbericht lokaal bewaren' : 'Reactie lokaal bewaren'}" disabled>${icon('send')}</button></div></form><div class="composer-help" id="composer-help"><span>${'Alleen lokaal bewaard'} <span class="desktop-hint">· Enter om te versturen</span></span><span class="byte-count" id="byte-count"></span></div><p class="composer-error" id="reply-error" role="alert" hidden></p></div></section>`;
   const messages = messagesFor(id, state);
   let previousDay = '';
   const thread = document.querySelector('#message-thread');
@@ -267,7 +267,7 @@ function renderChat(id) {
     const heading = day !== previousDay ? `<div class="date-label">${dayLabel(message.at)}</div>` : '';
     previousDay = day;
     return heading + renderMessage(message, business);
-  }).join('') : `<div class="thread-empty">${icon('chat')}<h2>Begin met een update.</h2><p>Schrijf een titel en een bericht voor ${html(business.name)}.<br>In dit voorbeeld blijft alles lokaal.</p></div>`;
+  }).join('') : `<div class="thread-empty">${icon('chat')}<h2>Begin met een update.</h2><p>Schrijf een bericht voor ${html(business.name)}.<br>In dit voorbeeld blijft alles lokaal.</p></div>`;
   thread.scrollTop = thread.scrollHeight;
   requestAnimationFrame(() => { thread.setAttribute('aria-live', 'polite'); });
   updateComposer();
@@ -276,7 +276,7 @@ function renderChat(id) {
 function updateComposer() {
   const input = document.querySelector('#reply');
   if (!input) return;
-  const title = document.querySelector('#message-title')?.value || '';
+  const title = '';
   const limit = isBusiness() ? MESSAGE_LIMITS.business : MESSAGE_LIMITS.customer;
   const size = byteLength(input.value) + (isBusiness() ? byteLength(title) : 0);
   const over = size > limit;
@@ -285,12 +285,12 @@ function updateComposer() {
   counter.classList.toggle('over-limit', over);
   input.setAttribute('aria-invalid', String(over));
   document.querySelector('#message-title')?.setAttribute('aria-invalid', String(over));
-  document.querySelector('.send-button').disabled = Boolean(isBusiness() ? validateBusinessMessage(title, input.value) : validateReply(input.value));
+  document.querySelector('.send-button').disabled = Boolean(isBusiness() ? validateBusinessMessage(title, input.value, MESSAGE_LIMITS.business, false) : validateReply(input.value));
   input.style.height = 'auto';
   input.style.height = `${Math.min(input.scrollHeight + 2, 140)}px`;
   const error = document.querySelector('#reply-error');
   error.hidden = !over;
-  error.textContent = over ? `${isBusiness() ? 'Titel en bericht zijn samen' : 'Je bericht is'} te groot. Maximaal ${limit} bytes.` : '';
+  error.textContent = over ? `${'Je bericht is'} te groot. Maximaal ${limit} bytes.` : '';
 }
 
 function render(focus = false) {
@@ -556,7 +556,7 @@ document.addEventListener('submit', (event) => {
     const input = document.querySelector('#reply');
     const previous = messagesFor(id, state).at(-1);
     const titleInput = document.querySelector('#message-title');
-    const error = isBusiness() ? addBusinessMessage(state, id, titleInput.value, input.value) : addReply(state, id, input.value);
+    const error = isBusiness() ? addBusinessMessage(state, id, '', input.value) : addReply(state, id, input.value);
     if (error) { const field = document.querySelector('#reply-error'); field.textContent = error; field.hidden = false; return; }
     const saved = persist();
     const message = messagesFor(id, state).at(-1);
@@ -577,7 +577,7 @@ document.addEventListener('keydown', (event) => {
   if (event.target.id === 'reply' && event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
     event.preventDefault();
     const title = document.querySelector('#message-title')?.value || '';
-    if (!(isBusiness() ? validateBusinessMessage(title, event.target.value) : validateReply(event.target.value))) document.querySelector('#reply-form').requestSubmit();
+    if (!(isBusiness() ? validateBusinessMessage(title, event.target.value, MESSAGE_LIMITS.business, false) : validateReply(event.target.value))) document.querySelector('#reply-form').requestSubmit();
   }
 });
 dialog.addEventListener('click', (event) => {

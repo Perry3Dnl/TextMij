@@ -129,6 +129,10 @@ In Business mode open **Bekijk bedrijfsprofiel**, then **Profiel bewerken** to e
 
 When a company sets a logo, Conappt displays it in its business account selector, account avatar in desktop/mobile navigation, business dashboard, company profile and linked customer conversations. Initials or the existing company icon remain the fallback for businesses without a logo. The existing browser-local logo persistence is unchanged.
 
+## Title-free business chat replies (0.12.5)
+
+Within an existing business conversation, the message composer now has just one text field, like the customer's composer. Structured title/text templates and their strict validator remain available for future outbound updates and API use. Previously sent messages with titles still render their titles. Messages remain browser-local in the preview.
+
 ## Automatic round-trip development benchmark (0.13.0)
 
 After each successful production activation, a Chromium browser loads `https://conappt.com` and verifies the exact release revision. The browser runs six increasing bulk bursts at 0, 10, 20, 30, 40 and 50 seconds. Each message contains **1024 binary bytes in each direction**, including a unique sequence number; random content prevents compression from inflating the result. Messages travel browser → public HTTPS/Caddy → Node → browser. The browser compares every returned byte and counts only complete returns within the same 60-second window. A return counts as **one round-trip message**, not two messages. No extrapolated totals or abbreviated millions are displayed.
@@ -138,3 +142,4 @@ The bottom-of-screen **Dev-test** label shows the full completed count and messa
 This is **measured transport throughput**, not a proven absolute server maximum or production chat delivery throughput. It excludes account authorization, encryption, MySQL persistence and the real message scheduler (which currently releases one message per three seconds). Browser CPU, network path, six concurrent HTTP requests and batch overhead also affect the measured count. Every binary HTTP batch carries at most 256 messages (256 KiB); workers apply backpressure while burst demand grows adaptively, with no small message-count cap. Failed requests and messages outstanding/late at the deadline are included in the published result rather than counted as delivered.
 
 Load endpoints require a fresh deployment-only credential transferred over pinned SSH, a single active run and a short measurement window. There is no public start button. Diagnostic traffic is never inserted into customer messages or databases. CI runs the same full-minute browser test against an isolated local server before release. A failed post-deployment benchmark fails the workflow/production status and remains visible as pending/failed; it does not undo an otherwise healthy activation or touch existing data. No mobile package is currently implemented in this repository.
+

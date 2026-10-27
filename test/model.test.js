@@ -258,3 +258,15 @@ test('company profile validates external links and persists optional public fiel
   const state=freshState();state.business.profile=profile;
   assert.deepEqual(restoreState(JSON.stringify(state)).business.profile,profile);
 });
+
+test('business can send a plain chat message without title; structured templates still require one', () => {
+  const state = freshState();
+  state.mode = 'business';
+  assert.equal(validateBusinessMessage('', 'Hallo', MESSAGE_LIMITS.business, false), null);
+  assert.notEqual(validateBusinessMessage('', 'Hallo'), null);
+  assert.equal(addBusinessMessage(state, 'customer-sam', '', 'Hallo in de chat'), null);
+  const sent = messagesFor('customer-sam', state).at(-1);
+  assert.equal(sent.title, '');
+  assert.equal(sent.text, 'Hallo in de chat');
+  assert.notEqual(addBusinessMessage(state, 'customer-sam', '', 'x'.repeat(1025)), null);
+});
