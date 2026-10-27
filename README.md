@@ -120,3 +120,7 @@ In the personal-mode conversation with the linked example company, the complete 
 ## Business profile editor panels (0.12.0)
 
 The business profile settings now group branding, contact info, opening hours, and external quick actions into smaller panels. Businesses add/remove up to three actions as needed instead of seeing six mandatory fields. The public company profile renders configured actions as prominent call-to-action buttons linking into the business's own systems.
+
+## In-place business profile editing (0.12.1)
+
+In Business mode open **Bekijk bedrijfsprofiel**, then **Profiel bewerken** to edit public details and action buttons directly on the profile page; saving returns to the profile preview. The standalone public-profile editor was removed from Settings, which retains account credentials, theme, verification, and notification controls. The same profile route in Personal mode is read-only. Changes remain browser-local until authenticated server profiles are available.
