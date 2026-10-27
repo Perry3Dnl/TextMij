@@ -11,6 +11,7 @@ export function safeExternalUrl(value) {
   } catch { return ''; }
 }
 export function cleanBusinessProfile(input = {}) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) input = {};
   const text = (v,n) => typeof v === 'string' ? Array.from(v.trim()).slice(0,n).join('') : '';
   const phone = text(input.phone,35);
   const socials = {};
