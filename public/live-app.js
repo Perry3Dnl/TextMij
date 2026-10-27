@@ -60,10 +60,10 @@ function navigation() {
   document.querySelector('.desktop-navigation').innerHTML=markup;
   document.querySelector('.mobile-navigation').innerHTML=markup;
   document.querySelectorAll('[data-profile-name]').forEach(el=>el.textContent=client.account?(business()?client.account.name:'Mijn Conappt'):'Welkom');
-  document.querySelectorAll('[data-profile-initial]').forEach(el=>el.textContent=client.account?Array.from(client.account.name)[0]:'C');
+  document.querySelectorAll('[data-profile-initial]').forEach(el=>{if(business()&&client.account?.profile?.logo)el.innerHTML='<img class="profile-logo-image" src="'+html(client.account.profile.logo)+'" alt="">';else el.textContent=client.account?Array.from(client.account.name)[0]:'C';});
   document.querySelectorAll('[data-profile-role]').forEach(el=>el.textContent=business()?'Zakelijk · wissel profiel':'Persoonlijk · wissel profiel');
   document.querySelectorAll('[data-mode-label]').forEach(el=>el.textContent=client.account?(business()?'Zakelijk':'Persoonlijk'):'Start');
-  document.querySelectorAll('[data-mode-icon]').forEach(el=>el.innerHTML=icon(business()?'business':'person'));
+  document.querySelectorAll('[data-mode-icon]').forEach(el=>el.innerHTML=business()&&client.account?.profile?.logo?'<img class="mode-logo-image" src="'+html(client.account.profile.logo)+'" alt="">':icon(business()?'business':'person'));
   const themeAccount=business()?client.account:((page==='gesprek'||page==='bedrijf')?contact(id):null);
   const theme=themeAccount?.theme==='custom'?themeAccount.customTheme:BUSINESS_THEMES[themeAccount?.theme||'white'];
   const active=Boolean(themeAccount?.kind==='business'&&theme);
@@ -149,16 +149,16 @@ function chat(id) {
     (!business()?'<button class="icon-button" data-action="report" data-id="'+id+'" aria-label="Bedrijf melden" title="Bedrijf melden">'+icon('flag')+'</button>':'')+'</div></header>'+
     '<div class="thread" id="message-thread" role="log" aria-label="Berichten"></div>'+
     '<div class="composer-wrap">'+(business()?'<div class="quick-tools"><div><strong>Snelle berichten</strong><button class="text-link plain-button" data-action="industries">'+html(industryFor(client.account.industryId)?.label||'Kies een bedrijfstemplate')+'</button></div><div class="quick-tool-buttons">'+tools.map(action=>button(html(action.label)+(action.fields.length?'…':icon('send')),'quick-message','data-id="'+action.id+'" title="'+html(action.text)+'"',true)).join('')+'</div></div>':'')+
-    '<form class="composer" id="reply-form" data-id="'+id+'">'+(business()?'<label class="sr-only" for="message-title">Titel</label><input class="text-input message-title-input" id="message-title" name="title" placeholder="Titel van je bericht…" value="'+html(draft.title)+'" required>':'')+
-    '<div class="composer-row"><label class="sr-only" for="reply">Bericht</label><textarea id="reply" name="text" rows="1" placeholder="'+(business()?'Schrijf je update…':'Schrijf je bericht…')+'" required>'+html(draft.text)+'</textarea><button class="button send-button" type="submit" aria-label="Bericht versturen">'+icon('send')+'</button></div>'+errorLine+'</form>'+
+    '<form class="composer" id="reply-form" data-id="'+id+'">'+
+    '<div class="composer-row"><label class="sr-only" for="reply">Bericht</label><textarea id="reply" name="text" rows="1" placeholder="'+('Schrijf je bericht…')+'" required>'+html(draft.text)+'</textarea><button class="button send-button" type="submit" aria-label="Bericht versturen">'+icon('send')+'</button></div>'+errorLine+'</form>'+
     '<div class="composer-help"><span>Berichten worden opgehaald zolang Conappt openstaat.</span><span id="byte-count"></span></div></div></section>';
   thread(id,true);composer();
 }
 function composer() {
   const form=document.querySelector('#reply-form');if(!form)return;
-  const size=byteLength(form.elements.text.value)+(business()?byteLength(form.elements.title.value):0);
+  const size=byteLength(form.elements.text.value);
   document.querySelector('#byte-count').textContent=size+' / 1024 bytes';
-  form.querySelector('[type="submit"]').disabled=sending||!form.elements.text.value.trim()||size>1024||(business()&&!form.elements.title.value.trim());
+  form.querySelector('[type="submit"]').disabled=sending||!form.elements.text.value.trim()||size>1024;
 }
 function profile(id) {
   const own=business()&&id===client.account.accountId,item=own?client.account:contact(id);
@@ -263,6 +263,11 @@ async function send(id,title,text,pendingId) {
     document.querySelectorAll('[data-action="quick-message"]').forEach(el=>el.disabled=false);
   }
 }
+function profileChoice(role,title,symbol) {
+  const account=client.profiles[role];
+  const image=account?.profile?.logo;
+  return '<button type="button" class="account-choice '+(client.role===role?'selected':'')+'" data-action="choose-role" data-id="'+role+'"><span class="account-choice-icon">'+(image?'<img class="account-logo-image" src="'+html(image)+'" alt="">':icon(symbol))+'</span><span class="account-choice-copy"><strong>'+html(title)+'</strong><small>'+(role==='business'?'Zakelijk profiel':'Persoonlijk profiel')+'</small></span>'+(client.role===role?icon('check'):'')+'</button>';
+}
 async function switchRole(role) {
   if(sending)throw new Error('Wacht even tot je bericht is verstuurd.');
   if(!await client.restore(role)) {
@@ -282,7 +287,7 @@ document.addEventListener('click',async event=>{
     else if(action==='switch-account') {
       if(!client.account){welcome();return;}
       openDialog('<h2>Wissel van profiel</h2><p>Voor jezelf en voor je bedrijf, in dezelfde app.</p><div class="account-choices">'+
-        button(icon('person')+' Persoonlijk','choose-role','data-id="personal"',business())+button(icon('business')+' Zakelijk','choose-role','data-id="business"',!business())+'</div><div class="dialog-actions">'+closeButton()+'</div>');
+        profileChoice('personal','Persoonlijk','person')+profileChoice('business',client.profiles.business?.name||'Start je bedrijf','business')+'</div><div class="dialog-actions">'+closeButton()+'</div>');
     } else if(action==='choose-role'){el.disabled=true;await switchRole(el.dataset.id);}
     else if(action==='close-dialog')dialog.close();
     else if(action==='show-qr')await showQr();
@@ -364,7 +369,7 @@ document.addEventListener('submit',async event=>{
       if(!code)throw new Error('Gebruik een Conappt-code zoals 7483-RGY-RCH.');
       const id=await client.connect(code,data.get('customer-alias'));
       dialog.close();go('gesprek/'+id);render();toast('Jullie zijn verbonden.');
-    } else if(form.id==='reply-form')await send(form.dataset.id,business()?data.get('title'):'Reactie',data.get('text'));
+    } else if(form.id==='reply-form')await send(form.dataset.id,'',data.get('text'));
     else if(form.id==='quick-action-form') {
       const action=quickActionsFor(client.account.industryId).find(item=>item.id===form.dataset.id);
       const message=messageFromAction(action,Object.fromEntries(data));
@@ -422,6 +427,7 @@ async function refresh() {
   document.querySelectorAll('.connection-status').forEach(el=>el.textContent=online?'Verbonden':'Verbinding herstellen…');
 }
 try {
+  client.profiles.business=await deviceGet('public-profile:business');
   const mode=await deviceGet('mode')||'personal';
   if(!await client.restore(mode))await client.restore(mode==='personal'?'business':'personal');
   render();

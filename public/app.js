@@ -73,9 +73,14 @@ function route() {
   return { page, id };
 }
 
+function companyLogo(className = '', alt = '') {
+  const logo = state.business.profile.logo;
+  return logo ? `<img class="${className}" src="${logo}" alt="${html(alt)}">` : '';
+}
+
 function avatar(business, extra = '') {
-  if (!isBusiness() && business.id === 'studio-noord' && state.business.profile.logo) {
-    return `<img class="avatar company-avatar ${extra}" src="${state.business.profile.logo}" alt="" aria-hidden="true">`;
+  if (business.id === 'studio-noord' && state.business.profile.logo) {
+    return companyLogo(`avatar company-avatar ${extra}`);
   }
   return `<span class="avatar ${business.color} ${extra}" aria-hidden="true">${html(business.initials)}</span>`;
 }
@@ -106,7 +111,7 @@ function updateNavigation() {
   document.querySelector('.mobile-navigation').innerHTML = markup;
   const profileName = isBusiness() ? state.business.name : state.name;
   document.querySelectorAll('[data-profile-name]').forEach((element) => { element.textContent = profileName; });
-  document.querySelectorAll('[data-profile-initial]').forEach((element) => { element.textContent = Array.from(profileName)[0]?.toLocaleUpperCase('nl') || 'J'; });
+  document.querySelectorAll('[data-profile-initial]').forEach((element) => { if (isBusiness() && state.business.profile.logo) { element.innerHTML = companyLogo('profile-logo-image'); } else { element.textContent = Array.from(profileName)[0]?.toLocaleUpperCase('nl') || 'J'; } });
   document.querySelectorAll('[data-profile-role]').forEach((element) => { element.textContent = isBusiness() ? 'Zakelijk · wissel account' : 'Persoonlijk · wissel account'; });
   document.querySelectorAll('[data-mode-label]').forEach((element) => { element.textContent = isBusiness() ? 'Zakelijk' : 'Persoonlijk'; });
   document.querySelectorAll('[data-mode-icon]').forEach((element) => { element.innerHTML = icon(isBusiness() ? 'business' : 'person'); });
@@ -190,7 +195,7 @@ function renderSettings() {
 function renderBusinessHome() {
   const recent = conversationsFor(state).slice(0, 3);
   main.innerHTML = `${pageHeader('Korte lijntjes met je klanten.', 'Updates versturen, vragen beantwoorden. Gewoon hier.', 'JOUW BEDRIJF')}
-    <div class="home-grid"><section class="card code-card business-home-card"><div class="card-heading"><h2 class="card-label">JE ZAKELIJKE PROFIEL</h2><span class="sample-label">Voorbeeld</span></div><div class="business-identity"><span class="business-mark">${icon('business')}</span><div><h2>${html(state.business.name)} ${verificationLabel()}</h2><p>${html(state.business.email)}</p></div></div><p class="code-description">Een bevestiging of een korte update?<br>Vraag om de Conappt-code van je klant en begin.</p><div class="code-actions"><button class="button" data-action="new-customer">${icon('plus')}Nieuw gesprek</button><a class="button secondary" href="#gesprekken">Je klanten ${icon('arrow')}</a></div><div class="device-note">${icon('phone')}Alles vanuit dezelfde app</div></section>
+    <div class="home-grid"><section class="card code-card business-home-card"><div class="card-heading"><h2 class="card-label">JE ZAKELIJKE PROFIEL</h2><span class="sample-label">Voorbeeld</span></div><div class="business-identity"><span class="business-mark">${state.business.profile.logo ? companyLogo('business-logo-image') : icon('business')}</span><div><h2>${html(state.business.name)} ${verificationLabel()}</h2><p>${html(state.business.email)}</p></div></div><p class="code-description">Een bevestiging of een korte update?<br>Vraag om de Conappt-code van je klant en begin.</p><div class="code-actions"><button class="button" data-action="new-customer">${icon('plus')}Nieuw gesprek</button><a class="button secondary" href="#gesprekken">Je klanten ${icon('arrow')}</a></div><div class="device-note">${icon('phone')}Alles vanuit dezelfde app</div></section>
     <div class="home-secondary"><section class="card how-card"><h2>Een bericht is zo geregeld.</h2><ol class="how-list"><li><span class="step-number">1</span><div><strong>Vraag om de code</strong><p>Je klant vindt die op zijn eigen Home.</p></div></li><li><span class="step-number">2</span><div><strong>Stuur een update</strong><p>Een titel, je bericht en klaar.</p></div></li><li><span class="step-number">3</span><div><strong>Houd contact</strong><p>Antwoorden komen in hetzelfde gesprek.</p></div></li></ol></section><section class="card quiet-card"><div class="icon-orbit">${icon('chat')}</div><h3>Geen eigen website nodig.</h3><p>Gebruik Conappt voor jezelf én voor je bedrijf. Wisselen kan altijd via je profiel.</p><button class="text-link plain-button" data-action="switch-account">Wissel van account ${icon('arrow')}</button></section></div>
     <section class="home-recent"><div class="section-heading"><h2>Je laatste klantgesprekken</h2><a class="text-link" href="#gesprekken">Bekijk alles ${icon('arrow')}</a></div><div class="card conversation-list">${recent.map(conversationRow).join('')}</div></section></div>${previewNote()}`;
 }
@@ -252,7 +257,7 @@ function renderChat(id) {
   }
   markRead(state, id); persist(false);
   const muted = mutedChats().includes(id);
-  main.innerHTML = `<section class="chat-panel" style="${themeStyle(businessThemeFor(state, id))}" aria-label="Gesprek met ${html(business.name)}" data-company-id="${id}"><header class="chat-header"><a class="icon-button chat-back" href="#gesprekken" aria-label="Terug naar gesprekken">${icon('back')}</a>${avatar(business)}<div class="chat-identity"><h1 class="chat-business-name">${!isBusiness() && id === 'studio-noord' ? `<a class="company-chat-link" href="#bedrijf/${id}">${html(business.name)}</a>` : html(business.name)}${!isBusiness() && id === 'studio-noord' ? verificationLabel() : ''}</h1><span class="chat-business-detail">${html(business.category)}</span></div><div class="chat-header-actions"><button class="icon-button" data-action="switch-account" aria-label="Wissel van account in dit gesprek">${icon(isBusiness() ? 'business' : 'person')}</button><button class="icon-button" data-action="mute-chat" data-id="${id}" aria-label="${muted ? 'Meldingen voor dit gesprek aanzetten' : 'Meldingen voor dit gesprek uitzetten'}" aria-pressed="${muted}">${icon(muted ? 'bellOff' : 'bell')}</button><button class="icon-button" data-action="business-info" data-id="${id}" aria-label="Over ${html(business.name)}">${icon('info')}</button></div></header><div class="chat-demo-strip">${isBusiness() ? `Zakelijk · ${html(state.business.name)} · ` : ''}Voorbeeldgesprek · berichten blijven lokaal</div><div class="thread" id="message-thread" role="log" aria-label="Berichten" aria-live="off"></div><div class="composer-wrap"><form class="composer" id="reply-form" data-id="${id}">${isBusiness() ? `<label class="sr-only" for="message-title">Titel van het bericht</label><input class="text-input message-title-input" id="message-title" placeholder="Titel van je bericht…" value="${html(titleDrafts.get(draftKey(id)) || '')}" aria-describedby="composer-help reply-error" required>` : ''}<div class="composer-row"><label class="sr-only" for="reply">${isBusiness() ? 'Inhoud van het bericht' : 'Je reactie'}</label><textarea id="reply" rows="1" placeholder="${isBusiness() ? 'Schrijf je update…' : 'Schrijf een bericht…'}" enterkeyhint="send" aria-describedby="composer-help reply-error">${html(drafts.get(draftKey(id)) || '')}</textarea><button class="button send-button" type="submit" aria-label="${isBusiness() ? 'Bedrijfsbericht lokaal bewaren' : 'Reactie lokaal bewaren'}" disabled>${icon('send')}</button></div></form><div class="composer-help" id="composer-help"><span>${isBusiness() ? 'Titel en inhoud samen · Alleen lokaal bewaard' : 'Alleen lokaal bewaard'} <span class="desktop-hint">· Enter om te versturen</span></span><span class="byte-count" id="byte-count"></span></div><p class="composer-error" id="reply-error" role="alert" hidden></p></div></section>`;
+  main.innerHTML = `<section class="chat-panel" style="${themeStyle(businessThemeFor(state, id))}" aria-label="Gesprek met ${html(business.name)}" data-company-id="${id}"><header class="chat-header"><a class="icon-button chat-back" href="#gesprekken" aria-label="Terug naar gesprekken">${icon('back')}</a>${avatar(business)}<div class="chat-identity"><h1 class="chat-business-name">${!isBusiness() && id === 'studio-noord' ? `<a class="company-chat-link" href="#bedrijf/${id}">${html(business.name)}</a>` : html(business.name)}${!isBusiness() && id === 'studio-noord' ? verificationLabel() : ''}</h1><span class="chat-business-detail">${html(business.category)}</span></div><div class="chat-header-actions"><button class="icon-button" data-action="switch-account" aria-label="Wissel van account in dit gesprek">${icon(isBusiness() ? 'business' : 'person')}</button><button class="icon-button" data-action="mute-chat" data-id="${id}" aria-label="${muted ? 'Meldingen voor dit gesprek aanzetten' : 'Meldingen voor dit gesprek uitzetten'}" aria-pressed="${muted}">${icon(muted ? 'bellOff' : 'bell')}</button><button class="icon-button" data-action="business-info" data-id="${id}" aria-label="Over ${html(business.name)}">${icon('info')}</button></div></header><div class="chat-demo-strip">${isBusiness() ? `Zakelijk · ${html(state.business.name)} · ` : ''}Voorbeeldgesprek · berichten blijven lokaal</div><div class="thread" id="message-thread" role="log" aria-label="Berichten" aria-live="off"></div><div class="composer-wrap"><form class="composer" id="reply-form" data-id="${id}"><div class="composer-row"><label class="sr-only" for="reply">${isBusiness() ? 'Inhoud van het bericht' : 'Je reactie'}</label><textarea id="reply" rows="1" placeholder="${'Schrijf een bericht…'}" enterkeyhint="send" aria-describedby="composer-help reply-error">${html(drafts.get(draftKey(id)) || '')}</textarea><button class="button send-button" type="submit" aria-label="${isBusiness() ? 'Bedrijfsbericht lokaal bewaren' : 'Reactie lokaal bewaren'}" disabled>${icon('send')}</button></div></form><div class="composer-help" id="composer-help"><span>${'Alleen lokaal bewaard'} <span class="desktop-hint">· Enter om te versturen</span></span><span class="byte-count" id="byte-count"></span></div><p class="composer-error" id="reply-error" role="alert" hidden></p></div></section>`;
   const messages = messagesFor(id, state);
   let previousDay = '';
   const thread = document.querySelector('#message-thread');
@@ -261,7 +266,7 @@ function renderChat(id) {
     const heading = day !== previousDay ? `<div class="date-label">${dayLabel(message.at)}</div>` : '';
     previousDay = day;
     return heading + renderMessage(message, business);
-  }).join('') : `<div class="thread-empty">${icon('chat')}<h2>Begin met een update.</h2><p>Schrijf een titel en een bericht voor ${html(business.name)}.<br>In dit voorbeeld blijft alles lokaal.</p></div>`;
+  }).join('') : `<div class="thread-empty">${icon('chat')}<h2>Begin met een update.</h2><p>Schrijf een bericht voor ${html(business.name)}.<br>In dit voorbeeld blijft alles lokaal.</p></div>`;
   thread.scrollTop = thread.scrollHeight;
   requestAnimationFrame(() => { thread.setAttribute('aria-live', 'polite'); });
   updateComposer();
@@ -270,7 +275,7 @@ function renderChat(id) {
 function updateComposer() {
   const input = document.querySelector('#reply');
   if (!input) return;
-  const title = document.querySelector('#message-title')?.value || '';
+  const title = '';
   const limit = isBusiness() ? MESSAGE_LIMITS.business : MESSAGE_LIMITS.customer;
   const size = byteLength(input.value) + (isBusiness() ? byteLength(title) : 0);
   const over = size > limit;
@@ -279,12 +284,12 @@ function updateComposer() {
   counter.classList.toggle('over-limit', over);
   input.setAttribute('aria-invalid', String(over));
   document.querySelector('#message-title')?.setAttribute('aria-invalid', String(over));
-  document.querySelector('.send-button').disabled = Boolean(isBusiness() ? validateBusinessMessage(title, input.value) : validateReply(input.value));
+  document.querySelector('.send-button').disabled = Boolean(isBusiness() ? validateBusinessMessage(title, input.value, MESSAGE_LIMITS.business, false) : validateReply(input.value));
   input.style.height = 'auto';
   input.style.height = `${Math.min(input.scrollHeight + 2, 140)}px`;
   const error = document.querySelector('#reply-error');
   error.hidden = !over;
-  error.textContent = over ? `${isBusiness() ? 'Titel en bericht zijn samen' : 'Je bericht is'} te groot. Maximaal ${limit} bytes.` : '';
+  error.textContent = over ? `${'Je bericht is'} te groot. Maximaal ${limit} bytes.` : '';
 }
 
 function render(focus = false) {
@@ -324,7 +329,7 @@ function openDialog(content) {
 }
 
 function openAccountSwitcher() {
-  const choice = (mode, name, detail, symbol) => `<button class="account-choice ${state.mode === mode ? 'selected' : ''}" type="button" data-action="choose-account" data-mode="${mode}" aria-pressed="${state.mode === mode}"><span class="account-choice-icon">${icon(symbol)}</span><span class="account-choice-copy"><strong>${html(name)}</strong><small>${detail}</small></span>${state.mode === mode ? icon('check') : ''}</button>`;
+  const choice = (mode, name, detail, symbol) => `<button class="account-choice ${state.mode === mode ? 'selected' : ''}" type="button" data-action="choose-account" data-mode="${mode}" aria-pressed="${state.mode === mode}"><span class="account-choice-icon">${mode === 'business' && state.business.profile.logo ? companyLogo('account-logo-image') : icon(symbol)}</span><span class="account-choice-copy"><strong>${html(name)}</strong><small>${detail}</small></span>${state.mode === mode ? icon('check') : ''}</button>`;
   openDialog(`<h2>Wissel van account</h2><p>Voor jezelf of voor je bedrijf. Je gebruikt gewoon dezelfde app.</p><div class="account-choices">${choice('personal', state.name, 'Persoonlijk profiel', 'person')}${choice('business', state.business.name, 'Zakelijk profiel · voorbeeld', 'business')}</div><p class="dialog-note">Deze voorbeeldaccounts staan alleen op dit apparaat.</p><div class="dialog-actions"><button class="button secondary" data-action="close-dialog">Sluiten</button></div>`);
 }
 
@@ -550,7 +555,7 @@ document.addEventListener('submit', (event) => {
     const input = document.querySelector('#reply');
     const previous = messagesFor(id, state).at(-1);
     const titleInput = document.querySelector('#message-title');
-    const error = isBusiness() ? addBusinessMessage(state, id, titleInput.value, input.value) : addReply(state, id, input.value);
+    const error = isBusiness() ? addBusinessMessage(state, id, '', input.value) : addReply(state, id, input.value);
     if (error) { const field = document.querySelector('#reply-error'); field.textContent = error; field.hidden = false; return; }
     const saved = persist();
     const message = messagesFor(id, state).at(-1);
@@ -571,7 +576,7 @@ document.addEventListener('keydown', (event) => {
   if (event.target.id === 'reply' && event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
     event.preventDefault();
     const title = document.querySelector('#message-title')?.value || '';
-    if (!(isBusiness() ? validateBusinessMessage(title, event.target.value) : validateReply(event.target.value))) document.querySelector('#reply-form').requestSubmit();
+    if (!(isBusiness() ? validateBusinessMessage(title, event.target.value, MESSAGE_LIMITS.business, false) : validateReply(event.target.value))) document.querySelector('#reply-form').requestSubmit();
   }
 });
 dialog.addEventListener('click', (event) => {

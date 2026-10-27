@@ -11,7 +11,7 @@ Conappt is a hosted business-to-customer messaging service. Customers receive a 
 - Connections and public business profiles persist in MySQL and appear on both devices.
 - Searchable catalogue of industry starter packs, including a garage pack with ready-for-collection, progress, parts, approval and appointment messages.
 - Customer replies and business updates use the existing ciphertext API. The live client polls while open.
-- Business profile editing, optional logos/contact details/opening hours/external action links, and synchronized business chat themes.
+- Business profile editing, optional logos/contact details/opening hours/external action links, and synchronized business chat themes. Logos also appear in navigation and account switching. Ordinary chats use one text field; industry templates retain structured titles.
 - A private **Bedrijf melden** form in the customer chat and company profile. Reports are stored in MySQL and receive a receipt only after commit.
 - Responsive browser UI for desktop and phone. No packaged Android/iOS release or background push notifications yet.
 

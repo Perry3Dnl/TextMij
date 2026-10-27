@@ -613,3 +613,8 @@ body.customer-company-chat-theme .chat-panel .chat-business-detail { color: var(
 .company-description-editor .text-input{width:100%;min-height:128px;resize:vertical}
 .company-description-editor .field-help{margin:0}
 @media(max-width:540px){.company-brand-editor{grid-template-columns:1fr;gap:17px}.company-logo-editor{align-items:flex-start}}
+
+/* Uploaded business logo replaces initials in every owned business identity surface. */
+.profile-avatar:has(.profile-logo-image), .account-choice-icon:has(.account-logo-image), .business-mark:has(.business-logo-image) { overflow: hidden; padding: 0; }
+.profile-logo-image,.account-logo-image,.business-logo-image { display:block; width:100%; height:100%; object-fit:contain; background:var(--white); }
+.company-avatar { display:block; object-fit:contain; background:var(--white); border-radius:inherit; }

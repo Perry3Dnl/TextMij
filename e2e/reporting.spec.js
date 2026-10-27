@@ -34,6 +34,7 @@ test('two devices connect by a real QR scan, exchange messages, and report priva
   await business.getByRole('button',{name:'Scan QR-code',exact:true}).click();
   await expect(business.locator('.chat-panel')).toBeVisible();
   await expect.poll(()=>business.evaluate(()=>window.__cameraStream.getTracks().every(track=>track.readyState==='ended'))).toBe(true);
+  await expect(business.locator('#message-title')).toHaveCount(0);
   await business.getByRole('button',{name:'Auto klaar',exact:true}).click();
 
   await customer.getByRole('button',{name:'Sluiten',exact:true}).click();

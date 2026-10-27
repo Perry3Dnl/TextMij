@@ -3,6 +3,7 @@ import { generateDeviceKeyPair,exportDevicePublicKey,encryptForRecipient,decrypt
 import { validateBusinessMessage,validateReply } from './model.js';
 
 export class ConapptClient {
+  profiles={};
   role='personal';
   account=null;
   contacts=[];
@@ -54,7 +55,8 @@ export class ConapptClient {
   async activate(role,account,keys) {
     if(account.publicKey!==await exportDevicePublicKey(keys.publicKey))
       throw new Error('De apparaatsleutel hoort niet bij dit profiel. Open Conappt op het oorspronkelijke apparaat.');
-    this.role=role;this.account=account;this.keys=keys;this.contacts=[];
+    this.role=role;this.account=account;this.profiles[role]=account;this.keys=keys;this.contacts=[];
+    await deviceSet('public-profile:'+role,account);
     this.history=await deviceGet('history:'+account.accountId)||{messages:[],cursor:'0',read:{},pending:[]};
     await deviceSet('mode',role);
     await this.sync();
@@ -98,10 +100,12 @@ export class ConapptClient {
     const previous=this.account;
     const updated=await this.request('profile',{method:'PUT',body:{...previous,...patch}});
     this.account=updated;
+    this.profiles[this.role]=updated;
+    await deviceSet('public-profile:'+this.role,updated);
     return updated;
   }
   async send(contactId,title,text,pendingId) {
-    const error=this.role==='business'?validateBusinessMessage(title,text):validateReply(text);
+    const error=this.role==='business'?validateBusinessMessage(title,text,undefined,false):validateReply(text);
     if(error) throw new Error(error);
     const contact=this.contacts.find(item=>item.accountId===contactId);
     if(!contact) throw new Error('Dit gesprek is niet gevonden. Open je gesprekken opnieuw.');
@@ -109,7 +113,7 @@ export class ConapptClient {
     let pending=pendingId ? history.pending.find(item=>item.id===pendingId) : history.pending.find(item=>item.contactId===contactId && item.title===title && item.text===text);
     if(!pending) {
       pending={id:crypto.randomUUID(),contactId,title,text,at:Date.now(),envelope:await encryptForRecipient({
-        senderId:account.accountId,recipientId:contactId,recipientPublicKey:contact.publicKey,title,text,keyVersion:contact.keyVersion
+        senderId:account.accountId,recipientId:contactId,recipientPublicKey:contact.publicKey,title,text,keyVersion:contact.keyVersion,allowEmptyTitle:!title.trim()
       })};
       history.pending.push(pending);
       await deviceSet('history:'+account.accountId,history);

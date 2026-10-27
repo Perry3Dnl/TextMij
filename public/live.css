@@ -69,3 +69,5 @@
   .report-reason { padding:12px 10px;font-size:12px; }
   .industry-results { max-height:44dvh; }
 }
+
+.mode-logo-image { display:block;width:22px;height:22px;object-fit:contain;border-radius:5px; }
