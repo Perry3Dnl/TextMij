@@ -78,3 +78,7 @@ There is deliberately **no publicly writable message endpoint** yet: identity, r
 ## Storage encryption foundation
 
 A MySQL 8.4 Docker Compose configuration on an isolated internal network, an encrypted-envelope schema, and server-side ciphertext validation are staged for review. The database is **not deployed** and the app is **not E2EE-enabled** yet. See [E2EE design and rollout requirements](docs/E2EE.md). The shared reverse proxy does not have database access. Release version: 0.5.0.
+
+## Stable account identity and moving devices
+
+A future account has an opaque random persistent identifier, independent of its public contact code or mutable company name/email. Prototype transfer rendezvous tokens are short lived and single use; the UI, authentication, device-to-device key handover, and production registration are not available yet. The pair of account IDs binds sender/recipient metadata but does **not** serve as an E2EE key. See [account transfer design](docs/ACCOUNT_TRANSFER.md). Version 0.6.0.
