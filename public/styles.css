@@ -553,3 +553,26 @@ body.customer-company-chat-theme .message.outgoing .message-body { background: v
 body.customer-company-chat-theme .chat-demo-strip { background: var(--business-control); color: var(--business-foreground); border-color: var(--line); }
 body.customer-company-chat-theme .chat-panel .chat-business-name,
 body.customer-company-chat-theme .chat-panel .chat-business-detail { color: var(--chat-foreground); }
+
+/* Compact, grouped business profile editor */
+.company-profile-form { padding: 4px 24px 24px; display: grid; gap: 14px; }
+.company-editor-panel { min-width: 0; padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--white); }
+.company-editor-panel h3 { margin: 0; font-size: 16px; }
+.company-editor-panel p { margin: 6px 0 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
+.company-editor-panel summary { font-size: 16px; font-weight: 650; cursor: pointer; }
+.company-editor-panel summary span { display: block; margin-top: 4px; font-size: 12px; font-weight: 400; color: var(--muted); }
+.company-panel-fields { display: grid; gap: 8px; margin-top: 15px; }
+.company-panel-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+.company-panel-heading .button { flex-shrink:0; }
+.action-editors { margin-top: 16px; display:grid; gap:10px; }
+.action-editor { padding: 14px; border-radius: 12px; background: var(--canvas); border: 1px solid var(--line); }
+.action-editor-top { display:flex;align-items:center;gap:9px;margin-bottom:12px; }
+.action-editor-top strong { font-size: 13px; }
+.action-editor-top [data-action="remove-profile-action"] { margin-left:auto; }
+.action-icon { display:grid; place-items:center; width:30px; height:30px; border-radius:9px; background:var(--green-light); color:var(--green); }
+.action-editor-fields { display:grid; grid-template-columns:1fr 1fr; gap:9px 12px; }
+.action-editor-fields .text-input { min-width:0; width:100%; }
+.action-empty { padding: 12px 0; }
+.company-form-footer { padding-top: 4px; }
+.company-action-buttons .company-action-button { background: var(--chat-accent); color: var(--chat-background); }
+@media(max-width:760px) { .company-profile-form { padding:4px 18px 20px; } .company-panel-heading { flex-direction:column; } .action-editor-fields { grid-template-columns:1fr; } }
