@@ -1,4 +1,6 @@
 // Industry starter packs: content only. They do not book appointments or take payments.
+import { byteLength,validateBusinessMessage } from './model.js';
+
 const entries = [
   ['garage','Autogarage','Auto & vervoer','auto garage car automotive apk onderhoud reparatie','repair','auto'],
   ['bandenservice','Bandenservice','Auto & vervoer','banden tyres wheels winterbanden','repair','auto'],
@@ -103,7 +105,49 @@ const appointment = subject => action('appointment','Afspraak bevestigen','Afspr
   'Je ' + subject + ' staat gepland op {date} om {time}. Komt er iets tussen? Laat het ons hier weten.',
   [{name:'date',label:'Datum',type:'date'},{name:'time',label:'Tijd',type:'time'}]);
 
-export function quickActionsFor(industryId) {
+export function quickActionsFor(industryId, overrides = {}) {
+  return defaultQuickActions(industryId).map(item => {
+    const saved = overrides[industryId]?.[item.id];
+    if (!saved) return item;
+    return { ...item,...saved,fields:item.fields.filter(field => saved.text.includes('{'+field.name+'}')) };
+  });
+}
+
+// Only the owning business receives these overrides; placeholders retain their typed inputs.
+export function validateQuickMessages(input = {}) {
+  const object = value => value && typeof value === 'object' && !Array.isArray(value);
+  if (!object(input) || byteLength(JSON.stringify(input)) > 32 * 1024)
+    throw new TypeError('Je snelkeuzes zijn te groot. Gebruik maximaal 32 KiB aan aanpassingen.');
+  const result = {};
+  for (const [industryId,items] of Object.entries(input)) {
+    if (!industryFor(industryId) || !object(items)) throw new TypeError('Onbekende bedrijfstemplate.');
+    const defaults = defaultQuickActions(industryId);
+    const saved = {};
+    for (const [id,value] of Object.entries(items)) {
+      const original = defaults.find(item => item.id === id);
+      if (!original || !object(value)) throw new TypeError('Onbekende snelkeuze.');
+      const cleaned = {};
+      for (const key of ['label','title','text']) {
+        if (typeof value[key] !== 'string' || !value[key].trim()) throw new TypeError('Vul de knopnaam, titel en het bericht in.');
+        cleaned[key] = value[key].trim();
+      }
+      if (Array.from(cleaned.label).length > 35) throw new TypeError('De knopnaam mag maximaal 35 tekens bevatten.');
+      const error = validateBusinessMessage(cleaned.title,cleaned.text);
+      if (error) throw new TypeError(error);
+      const withoutFields = cleaned.text.replace(/\{([a-z]+)\}/g,(match,name) => {
+        if (!original.fields.some(field => field.name === name)) throw new TypeError('Dit invulveld hoort niet bij deze snelkeuze: '+match);
+        return '';
+      });
+      if (/[{}]/.test(withoutFields) || /[{}]/.test(cleaned.title))
+        throw new TypeError('Gebruik alleen de getoonde invulvelden in je bericht.');
+      if (['label','title','text'].some(key => cleaned[key] !== original[key])) saved[id] = cleaned;
+    }
+    if (Object.keys(saved).length) result[industryId] = saved;
+  }
+  return result;
+}
+
+function defaultQuickActions(industryId) {
   const industry = industryFor(industryId);
   if (!industry) return [];
   const subject = industry.subject;

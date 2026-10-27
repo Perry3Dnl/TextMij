@@ -10,14 +10,16 @@ All production requests use HTTPS and JSON. API clients authenticate with Author
 - API clients receive {accountId,code,token,name,kind,tier,keyVersion}. The token is secret and returned once.
 - With browser:true the token is omitted from JSON and set as an HttpOnly, SameSite=Strict role cookie. HTTPS uses Secure cookies. Browser requests send X-Conappt-Role: personal or business. Origin checks reject foreign-origin cookie-authenticated requests.
 - Browser keys are non-exportable CryptoKeys stored in IndexedDB. Do not put credentials/private keys in QR codes, URLs, logs, analytics or localStorage.
-- GET /api/v1/session returns the current authenticated account and its public profile.
+- GET /api/v1/session returns the current authenticated account and its profile, plus the owning business's private quick-message overrides.
 - GET /api/v1/accounts/:id-or-code resolves stable account ID and public key. This directory does not independently authenticate cryptographic keys or verify legal business identity.
 
 ## Connections and profiles
 
 - POST /api/v1/connections accepts {code,alias?} from an authenticated business. The code must identify a personal account. Reconnecting opens the same pair. The optional alias is visible only to that business.
 - GET /api/v1/connections returns the authenticated account's connected customers or businesses, including safe public profiles, keys and selected industry.
-- PUT /api/v1/profile accepts {name,industryId?,profile?,theme?,customTheme?} for the authenticated account. Business profile fields are logo, description, optional phone/HTTPS website/social links, opening hours and up to three external actions. Unknown industries and invalid theme colors are rejected.
+- PUT /api/v1/profile accepts {name,industryId?,profile?,theme?,customTheme?,quickMessages?} for the authenticated account. Business profile fields are logo, description, optional phone/HTTPS website/social links, opening hours and up to three external actions. Unknown industries and invalid theme colors are rejected.
+
+Quick-message overrides use {industryId:{actionId:{label,title,text}}}. Industry/action IDs must exist in the catalogue. Labels are limited to 35 characters, title plus text to 1024 UTF-8 bytes, and the complete override map to 32 KiB. Only the original action's typed placeholders are allowed in message text; removing a placeholder removes its input at send time. Final expanded messages are validated again before encryption. Sending defaults removes that override. Omitting quickMessages preserves existing overrides; an empty object clears them. Overrides persist in the existing business profile JSON with no schema migration. They are returned only to the owner through session/profile, never customer connection profiles or the public key directory. Operators can read these saved business templates; they are separate from encrypted sent messages.
 
 The live QR contains only the same-origin public contact link /#connect/CODE. Physical sharing of that code is the invitation to connect; it is not a login or device-transfer token.
 

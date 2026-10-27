@@ -1,13 +1,13 @@
 import { httpError, readJson, responseJson } from './http-json.js';
 import { cleanBusinessProfile, BUSINESS_THEMES, validThemeColors } from '../public/model.js';
-import { industryFor } from '../public/business-templates.js';
+import { industryFor,validateQuickMessages } from '../public/business-templates.js';
 
 function parseProfile(value) {
   try { return typeof value === 'string' ? JSON.parse(value) : value || {}; }
   catch { return {}; }
 }
 
-export function publicAccount(row) {
+export function publicAccount(row, own = false) {
   const result = {
     accountId: String(row.id), kind: row.kind, code: row.public_code,
     name: row.display_name, publicKey: row.public_key, keyVersion: row.key_version,
@@ -18,6 +18,7 @@ export function publicAccount(row) {
     result.theme = Object.hasOwn(BUSINESS_THEMES, profile.theme) ? profile.theme : 'white';
     result.customTheme = validThemeColors(profile.customTheme) ? profile.customTheme : null;
     result.industryId = industryFor(row.industry_id)?.id || null;
+    if (own) result.quickMessages = validateQuickMessages(profile.quickMessages);
   }
   return result;
 }
@@ -27,26 +28,28 @@ export class ContactsApi {
     this.pool = pool;
     this.authenticate = authenticate;
   }
-  async account(id) {
+  async account(id, own = false) {
     const [rows] = await this.pool.execute(
       'SELECT a.*, p.industry_id, p.profile_json FROM accounts a LEFT JOIN business_profiles p ON p.account_id = a.id WHERE a.id = ? LIMIT 1',
       [id]);
     if (!rows.length) throw httpError(404, 'Account not found');
-    return publicAccount(rows[0]);
+    return publicAccount(rows[0],own);
   }
   async handle(request, response, path) {
     if (!['/api/v1/session', '/api/v1/profile', '/api/v1/connections'].includes(path)) return false;
     const account = await this.authenticate(request);
     if (path === '/api/v1/session' && request.method === 'GET') {
-      responseJson(response, 200, await this.account(account.id));
+      responseJson(response, 200, await this.account(account.id,true));
     } else if (path === '/api/v1/profile' && request.method === 'PUT') {
-      const input = await readJson(request, 160 * 1024);
+      const input = await readJson(request, 192 * 1024);
       if (typeof input.name !== 'string' || !input.name.trim() || Array.from(input.name.trim()).length > 80)
         throw httpError(400, 'Display name required (maximum 80 characters)');
       if (account.kind === 'business') {
         if (input.industryId !== null && input.industryId !== undefined && !industryFor(input.industryId))
           throw httpError(400, 'Unknown business template');
         const profile = cleanBusinessProfile(input.profile);
+        profile.quickMessages = validateQuickMessages(input.quickMessages === undefined
+          ? (await this.account(account.id,true)).quickMessages : input.quickMessages);
         profile.theme = Object.hasOwn(BUSINESS_THEMES, input.theme) ? input.theme : 'white';
         if (profile.theme === 'custom' && !validThemeColors(input.customTheme))
           throw httpError(400, 'Invalid theme colors');
@@ -56,7 +59,7 @@ export class ContactsApi {
           [account.id, input.industryId || null, JSON.stringify(profile), input.industryId || null, JSON.stringify(profile)]);
       }
       await this.pool.execute('UPDATE accounts SET display_name = ? WHERE id = ?', [input.name.trim(), account.id]);
-      responseJson(response, 200, await this.account(account.id));
+      responseJson(response, 200, await this.account(account.id,true));
     } else if (path === '/api/v1/connections' && request.method === 'POST') {
       if (account.kind !== 'business') throw httpError(403, 'Only businesses can connect a customer');
       const input = await readJson(request);

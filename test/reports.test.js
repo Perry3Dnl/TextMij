@@ -57,6 +57,29 @@ test('name-only signup, real linking and private server-persisted company report
   assert.equal(JSON.stringify(await listing.json()).includes(db.reports[0].details),false);
 });
 
+test('business quick-message edits persist for the owner and stay out of customer profiles',async t=>{
+  const {db,request,signup,company,customer}=await fixture(t);
+  const quickMessages={garage:{ready:{label:'Ophalen',title:'Klaar',text:'Je auto is klaar. Tot straks!'}}};
+  const update=body=>request('profile',{method:'PUT',session:company,body:{name:company.name,industryId:'garage',...body}});
+  assert.equal((await update({quickMessages})).status,200);
+  assert.deepEqual((await(await request('session',{session:company})).json()).quickMessages,quickMessages);
+  // Legacy clients updating other fields must not discard private saved messages.
+  assert.equal((await update({theme:'black'})).status,200);
+  assert.deepEqual(JSON.parse(db.profiles[0].profile_json).quickMessages,quickMessages);
+  const own=await(await request('session',{session:company})).json();
+  assert.equal(own.theme,'black');assert.deepEqual(own.quickMessages,quickMessages);
+  const contacts=await(await request('connections',{session:customer})).json();
+  assert.equal(Object.hasOwn(contacts.contacts[0],'quickMessages'),false);
+  assert.equal(JSON.stringify(contacts).includes('Tot straks!'),false);
+  const other=await signup('business','Ander bedrijf');
+  assert.deepEqual((await(await request('session',{session:other})).json()).quickMessages,{});
+  const invalid=await update({quickMessages:{garage:{ready:{label:'Test',title:'Test',text:'Onbekend {token}'}}}});
+  assert.equal(invalid.status,400);
+  assert.deepEqual((await(await request('session',{session:company})).json()).quickMessages,quickMessages);
+  assert.equal((await update({quickMessages:{}})).status,200);
+  assert.deepEqual((await(await request('session',{session:company})).json()).quickMessages,{});
+});
+
 test('report authorization, relation, reason and length validation reject invalid submissions',async t=>{
   const {db,request,signup,company,report}=await fixture(t);
   assert.equal((await request('business-reports',{method:'POST',body:{}})).status,401);

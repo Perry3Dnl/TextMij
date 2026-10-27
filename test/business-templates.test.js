@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { INDUSTRIES,industryFor,searchIndustries,quickActionsFor,messageFromAction } from '../public/business-templates.js';
+import { INDUSTRIES,industryFor,searchIndustries,quickActionsFor,messageFromAction,validateQuickMessages } from '../public/business-templates.js';
 import { contactCode } from '../public/contact-code.js';
 import { validateBusinessMessage } from '../public/model.js';
 import { qrcodegen } from '../public/vendor/qrcodegen.js';
@@ -20,6 +20,27 @@ test('industry search finds garages through Dutch and English terms and all quic
   const approval=quickActionsFor('garage').find(action=>action.id==='approval');
   assert.throws(()=>messageFromAction(approval,{details:'Test',amount:'-1'}));
   assert.throws(()=>messageFromAction(approval,{details:'',amount:'10'}));
+});
+
+test('custom quick messages retain only the typed placeholders used and reject invalid overrides',()=>{
+  const ready={label:'Kom je auto halen',title:'Klaar bij de garage',text:'Je auto is klaar. Tot straks!'};
+  const approval={label:'Even akkoord?',title:'Overleg',text:'Graag je akkoord voor {details}.'};
+  const saved=validateQuickMessages({garage:{ready,approval}});
+  assert.deepEqual(quickActionsFor('garage',saved).find(a=>a.id==='ready'),{...ready,id:'ready',fields:[]});
+  const edited=quickActionsFor('garage',saved).find(a=>a.id==='approval');
+  assert.deepEqual(edited.fields.map(f=>f.name),['details']);
+  assert.equal(messageFromAction(edited,{details:'nieuwe remmen'}).text,'Graag je akkoord voor nieuwe remmen.');
+  assert.equal(quickActionsFor('garage').find(a=>a.id==='ready').label,'Auto klaar');
+  assert.deepEqual(validateQuickMessages({garage:{ready:quickActionsFor('garage')[0]}}),{});
+  for(const input of [
+    null,[],{unknown:{}},{garage:{unknown:ready}},
+    {garage:{ready:{...ready,label:'x'.repeat(36)}}},
+    {garage:{ready:{...ready,text:'😀'.repeat(300)}}},
+    {garage:{ready:{...ready,text:'Hallo {date}'}}},
+    {garage:{ready:{...ready,text:'Hallo {unclosed'}}},
+    {garage:{ready:{...ready,title:'Titel {date}'}}},
+    {garage:{ready:{...ready,text:' '}}},
+  ])assert.throws(()=>validateQuickMessages(input),TypeError);
 });
 
 test('real QR encoding decodes to a public contact link and rejects unrelated or secret-bearing input',()=>{
