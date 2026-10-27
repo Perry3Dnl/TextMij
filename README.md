@@ -128,3 +128,7 @@ In Business mode open **Bekijk bedrijfsprofiel**, then **Profiel bewerken** to e
 ## Consistent business logos (0.12.4)
 
 When a company sets a logo, Conappt displays it in its business account selector, account avatar in desktop/mobile navigation, business dashboard, company profile and linked customer conversations. Initials or the existing company icon remain the fallback for businesses without a logo. The existing browser-local logo persistence is unchanged.
+
+## Title-free business chat replies (0.12.5)
+
+Within an existing business conversation, the message composer now has just one text field, like the customer's composer. Structured title/text templates and their strict validator remain available for future outbound updates and API use. Previously sent messages with titles still render their titles. Messages remain browser-local in the preview.

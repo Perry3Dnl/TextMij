@@ -101,8 +101,8 @@ export function validateReply(text, limit = MESSAGE_LIMITS.customer) {
   return null;
 }
 
-export function validateBusinessMessage(title, text, limit = MESSAGE_LIMITS.business) {
-  if (!title.trim()) return 'Vul een titel in.';
+export function validateBusinessMessage(title, text, limit = MESSAGE_LIMITS.business, requireTitle = true) {
+  if (requireTitle && !title.trim()) return 'Vul een titel in.';
   if (!text.trim()) return 'Schrijf eerst een bericht.';
   if (byteLength(title) + byteLength(text) > limit) return `Titel en bericht zijn samen te groot. Maximaal ${limit} bytes.`;
   return null;
@@ -249,7 +249,7 @@ export function addReply(state, id, text, now = Date.now()) {
 
 export function addBusinessMessage(state, id, title, text, now = Date.now()) {
   if (!contactsFor(state, 'business').some((contact) => contact.id === id)) return 'Deze klant bestaat niet.';
-  const error = validateBusinessMessage(title, text);
+  const error = validateBusinessMessage(title, text, MESSAGE_LIMITS.business, false);
   if (error) return error;
   if (!state.replies[id]) state.replies[id] = [];
   state.replies[id].push({ id: `local-business-${id}-${now}`, from: 'business', title: title.trim(), text: text.trim(), at: now, local: true });
