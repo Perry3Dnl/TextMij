@@ -49,3 +49,7 @@ python3 -m unittest discover -s tests -v
 The web entry point is at `http://localhost:3000` and health is at `http://localhost:3000/api/health`. Use either `npm start` for the server or `npm run dev` to restart it automatically when source changes. No npm dependencies need to be installed.
 
 See [DEPLOY.md](DEPLOY.md) for GitHub secrets, variables, shared-server prerequisites, and the deployment flow.
+
+## Business verification preview
+
+The business Settings screen offers a simulated verification plan priced at **€20/month**. Confirming the mock checkout enables a blue **Demo-verificatie** outline beside the business name in the business dashboard and the example customer inbox/chat. Users can disable it at any time. The selection is stored locally with other preview preferences and survives business profile edits and page reloads. **No money is collected, no subscription is created, and no identity is checked.** The badge must not be described as genuine verification until a secured backend implements payment events, entitlement management, business identity review, and a server-authoritative public badge. Core business messaging stays free.

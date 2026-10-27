@@ -342,3 +342,10 @@ h1 { overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }
+
+/* Business verification is a visibly labeled local demo, not an identity claim. */
+.verification-outline { display: inline-flex; align-items: center; margin-left: 7px; padding: 2px 7px; border: 1.5px solid #2563eb; color: #1d4ed8; border-radius: 7px; font-size: 10px; font-weight: 700; line-height: 1.5; vertical-align: middle; white-space: nowrap; }
+.verification-plan { padding: 4px 24px 24px; display: flex; align-items: flex-start; flex-direction: column; gap: 12px; }
+.verification-plan p { margin: 6px 0 0; color: #647064; font-size: 13px; line-height: 1.6; }
+.verification-plan .field-help { font-size: 11px; }
+@media (max-width: 640px) { .verification-plan { padding: 4px 21px 22px; } .verification-outline { font-size: 9px; } }

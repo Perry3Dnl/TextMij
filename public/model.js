@@ -1,4 +1,5 @@
 export const STORAGE_KEY = 'textmij.preview.v1';
+export const VERIFY_PRICE_EUR = 20;
 export const DEMO_CODE = '7483-RGY-RCH';
 // Independent limits: increasing one must never change the other.
 export const MESSAGE_LIMITS = Object.freeze({ business: 1024, customer: 1024 });
@@ -77,7 +78,7 @@ export function escapeHtml(value) {
 export function freshState(now = Date.now()) {
   return {
     version: 1, mode: 'personal', name: 'Robin', startedAt: now,
-    business: { name: 'Studio Noord', email: 'hallo@studio-noord.example' },
+    business: { name: 'Studio Noord', email: 'hallo@studio-noord.example', demoVerification: 'inactive' },
     preferences: { notifications: true, sound: false, previews: true },
     read: [], readBusiness: [], muted: [], mutedBusiness: [],
     unreadPersonal: {}, unreadBusiness: {}, customers: [], replies: {},
@@ -95,6 +96,7 @@ export function restoreState(raw, now = Date.now()) {
     if (typeof data.name === 'string' && data.name.trim()) state.name = Array.from(data.name.trim()).slice(0, 60).join('');
     if (typeof data.business?.name === 'string' && data.business.name.trim()) state.business.name = Array.from(data.business.name.trim()).slice(0, 80).join('');
     if (typeof data.business?.email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.business.email) && data.business.email.length <= 254) state.business.email = data.business.email;
+    if (['inactive', 'active'].includes(data.business?.demoVerification)) state.business.demoVerification = data.business.demoVerification;
     if (Array.isArray(data.customers)) {
       const knownCodes = new Set(contactsFor(state, 'business').map((customer) => customer.code));
       for (const customer of data.customers.slice(0, 200)) {
@@ -208,4 +210,14 @@ export function addCustomer(state, rawCode, rawName = '', now = Date.now()) {
   const id = `client-${code.toLowerCase()}`;
   state.customers.push({ id, name, code, initials: Array.from(name)[0].toLocaleUpperCase('nl'), color: 'sage', category: `Klant · ${code}`, unread: 0, addedAt: now });
   return { id, created: true };
+}
+
+// Preview only: this is a local UI simulation, never a verified business identity.
+export function setDemoVerification(state, active) {
+  if (typeof active !== 'boolean') return false;
+  state.business.demoVerification = active ? 'active' : 'inactive';
+  return true;
+}
+export function hasDemoVerification(state) {
+  return state.business.demoVerification === 'active';
 }
