@@ -106,3 +106,7 @@ Theme choices now include White, Black (dark mode), and Custom. Custom exposes s
 ## Live release verification
 
 The server injects two inspectable `<head>` meta tags into the root HTML response: `<meta name="conappt-version" content="0.10.1">` and `<meta name="conappt-revision" content="<running Git SHA>">`. The latter is taken from the running container's `APP_REVISION`; the former from `package.json`. Compare the exact revision from `curl -fsS https://textmij.perry3d.nl/` against the deployment commit. HTML responses set `Cache-Control: no-store`; the health endpoint `/api/health` also identifies the deployed Git SHA. The public domain and internal identifiers remain unchanged.
+
+## Whole-business theme coverage
+
+In business mode, the saved White, Black, or Custom palette now colors the complete interface: page background, sidebar/mobile navigation, cards, controls, buttons, settings, conversation list and chat. The themed variables are scoped to the business mode; personal navigation remains independent and only the linked business chat inherits company colors. Custom changes are still saved locally in the browser preview and not synchronized to another device.
