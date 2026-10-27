@@ -21,7 +21,7 @@ test('HTTP deployment contract', async (t) => {
     const response = await fetch(origin);
     assert.equal(response.status, 200);
     assert.match(response.headers.get('content-type'), /text\/html/);
-    assert.match(await response.text(), /<title>TextMij/);
+    assert.match(await response.text(), /<title>Conappt/);
     assert.match(response.headers.get('content-security-policy'), /script-src 'self'/);
   });
   await t.test('client assets have correct MIME types and cannot read arbitrary files', async () => {
