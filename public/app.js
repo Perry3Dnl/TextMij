@@ -1,3 +1,4 @@
+import { startBenchmarkLabel } from './benchmark.js';
 import {
   STORAGE_KEY, DEMO_CODE, MESSAGE_LIMITS, freshState, restoreState, contactsFor,
   escapeHtml as html, byteLength, validateReply, validateBusinessMessage, messagesFor,
@@ -587,3 +588,4 @@ dialog.addEventListener('click', (event) => {
 window.addEventListener('hashchange', () => render(true));
 if (!location.hash) history.replaceState(null, '', '#home');
 render();
+startBenchmarkLabel(document.querySelector('#benchmark-status'));

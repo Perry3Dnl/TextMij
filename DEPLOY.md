@@ -94,3 +94,21 @@ Starting in version 0.9.1, the deploy job posts `textmij/production` to GitHub c
 ## Conappt canonical domain
 
 The existing shared Caddy reverse proxy serves both `conappt.com` and the historic `textmij.perry3d.nl` from the same container and deployment revision. HTTPS for both names is handled by the existing Caddy instance; preserve DNS A/AAAA and firewall ports 80/443. The existing legacy domain remains operational to preserve user access and integrations. Neither host is redirected in this release, to avoid breaking API callers. The deploy continues to edit only the managed TextMij marker block and validates the whole shared Caddy configuration before reloading. CI tests both hostnames through the reverse proxy on its isolated network. For production verification, check `https://conappt.com/api/health` and `https://textmij.perry3d.nl/api/health` return the same deployed revision.
+
+## Automatic browser stress test
+
+Version 0.13.0 adds a 60-second browser round-trip benchmark after `ship.sh` has activated and verified production. The deploy job installs pinned Playwright/Chromium on the GitHub runner; the app container remains a small Node server. `ship.sh` generates a fresh random credential in its private temporary directory, transfers it with pinned SSH and installs it as a read-only Compose secret in the release directory. No new GitHub secret is needed. Never print this credential, enable shell tracing around it, or include it in artifacts/URLs.
+
+Activation includes `deploy/benchmark.compose.yml`. It mounts the credential and the dedicated `textmij_benchmark_results` volume at `/app/benchmark-data` (owned by the existing non-root Node user). The benchmark API atomically saves only aggregate results. It does not read or write customer data, and normal rollback leaves this volume intact. The result includes the running revision; a different revision displays pending instead of presenting old measurements as current. Retained releases keep their credential file for Compose restart/rollback; starting a load test still requires that credential and an unused, time-limited process session.
+
+The runner loads `https://conappt.com`, checks the revision meta tag, runs the browser module, verifies the public result and reloads the actual app footer. Logs and the Actions summary contain full totals, unsuccessful returns and six per-burst counts. If this step fails after activation, the current release remains running and production status is marked failed; inspect whether activation or only the benchmark failed before choosing recovery. A workflow rerun creates a new release container and fresh credential, and repeats the measurement.
+
+For an isolated local browser check (no production data), install dev dependencies and Chromium, then run:
+
+```sh
+npm install --ignore-scripts --no-audit --no-fund
+npx playwright install --with-deps chromium
+node scripts/benchmark-smoke.js
+```
+
+The test reports observed throughput for this browser/network and current bounded batch transport, not an absolute hardware maximum or the durable messaging API's throughput. Details and counting semantics are in README.md.

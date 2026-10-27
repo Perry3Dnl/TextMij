@@ -40,6 +40,7 @@ umask 077
 ssh_dir="$(mktemp -d)"
 trap 'rm -rf -- "$ssh_dir"' EXIT
 printf '%s\n' "$DEPLOY_PASSWORD" >"$ssh_dir/password"
+python3 -c 'import secrets; print(secrets.token_hex(32))' >"$ssh_dir/benchmark-token"
 ssh-keyscan -T 15 -p "$DEPLOY_PORT" -t ed25519 "$DEPLOY_HOST" >"$ssh_dir/known_hosts" 2>/dev/null
 actual="$(ssh-keygen -lf "$ssh_dir/known_hosts" -E sha256 | awk 'NR == 1 {print $2}')"
 [ "$actual" = "$DEPLOY_HOST_KEY_FINGERPRINT" ] \
@@ -54,7 +55,7 @@ printf -v quoted_incoming '%q' "$incoming"
 sshpass -f "$ssh_dir/password" ssh "${ssh_options[@]}" -p "$DEPLOY_PORT" "$remote" \
   "install -d -m 0750 $quoted_incoming"
 sshpass -f "$ssh_dir/password" scp "${ssh_options[@]}" -P "$DEPLOY_PORT" \
-  "$bundle_dir/image.tar.gz" "$bundle_dir/source.tar.gz" "$remote:$incoming/"
+  "$bundle_dir/image.tar.gz" "$bundle_dir/source.tar.gz" "$ssh_dir/benchmark-token" "$remote:$incoming/"
 
 printf -v remote_arguments '%q ' "$DEPLOY_APP_DIR" "$GITHUB_SHA" "$release_id" "$TEXTMIJ_DOMAIN" \
   "$SHARED_PROXY_NETWORK" "$SHARED_CADDY_CONTAINER" "$SHARED_CADDYFILE"
@@ -76,7 +77,12 @@ flock -w 600 8
 install -d -m 0750 "$release_dir"
 tar -xzf "$incoming/source.tar.gz" -C "$release_dir" --no-same-owner
 docker load -i "$incoming/image.tar.gz"
+install -m 0444 "$incoming/benchmark-token" "$release_dir/.benchmark-token"
 bash "$release_dir/deploy/activate.sh" "$app_dir" "$revision" "$domain"
-rm -f -- "$incoming/image.tar.gz" "$incoming/source.tar.gz"
+rm -f -- "$incoming/image.tar.gz" "$incoming/source.tar.gz" "$incoming/benchmark-token"
 rmdir -- "$incoming"
 REMOTE
+
+# Credential stays in the SSH-protected temporary file and browser memory, never logs/artifacts.
+BENCHMARK_TOKEN="$(cat "$ssh_dir/benchmark-token")" BENCHMARK_ORIGIN="https://conappt.com" \
+  node "$script_dir/../scripts/run-benchmark.js"
