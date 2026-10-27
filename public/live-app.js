@@ -1,6 +1,6 @@
 import { ConapptClient } from './client.js';
 import { deviceGet,deviceSet } from './device-store.js';
-import { escapeHtml as html,byteLength,validateBusinessMessage,cleanBusinessProfile,safeExternalUrl,BUSINESS_THEMES,PROFILE_DAYS } from './model.js';
+import { escapeHtml as html,byteLength,cleanBusinessProfile,safeExternalUrl,BUSINESS_THEMES,PROFILE_DAYS } from './model.js';
 import { INDUSTRIES,industryFor,searchIndustries,quickActionsFor,messageFromAction } from './business-templates.js';
 import { REPORT_REASONS,validateReport } from './report-options.js';
 import { contactCode } from './contact-code.js';
@@ -421,7 +421,8 @@ async function refresh() {
     const changed=await client.sync();online=true;
     if(changed) {
       if(route().page==='gesprek'){thread(route().id);navigation();}
-      else if(!editing&&!main.contains(document.activeElement))render();
+      else if(route().page==='gesprekken'){updateInbox();navigation();}
+      else if(!editing&&!(main.contains(document.activeElement)&&document.activeElement.matches('input,textarea,select')))render();
     }
   } catch {online=false;}
   document.querySelectorAll('.connection-status').forEach(el=>el.textContent=online?'Verbonden':'Verbinding herstellen…');
