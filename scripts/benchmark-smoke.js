@@ -18,6 +18,7 @@ try {
   const [code] = await once(child, 'exit');
   if (code !== 0) throw new Error('Isolated browser benchmark failed');
 } finally {
+  server.closeAllConnections();
   await new Promise(resolve => server.close(resolve));
   await rm(directory, { recursive: true });
 }

@@ -34,7 +34,7 @@ jobs:
       - name: Verify one-minute benchmark in an isolated browser
         run: |
           npm install --ignore-scripts --no-audit --no-fund
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
           node scripts/benchmark-smoke.js
       - name: Test Caddy edits and deployment failure recovery
         run: python3 -m unittest discover -s tests -v
@@ -125,7 +125,7 @@ jobs:
       - name: Install deployment browser
         run: |
           npm install --ignore-scripts --no-audit --no-fund
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
       - name: Install SSH password helper
         run: |
           sudo apt-get update -qq

@@ -5,15 +5,23 @@ const origin = process.env.BENCHMARK_ORIGIN;
 const revision = process.env.GITHUB_SHA || process.env.BENCHMARK_REVISION;
 const token = process.env.BENCHMARK_TOKEN;
 if (!origin || !revision || !token) throw new Error('Benchmark origin, revision and deployment credential required');
+console.log('Launching deployment benchmark browser');
 const browser = await chromium.launch();
 try {
   const page = await browser.newPage();
   const response = await page.goto(origin, { waitUntil: 'networkidle' });
   if (!response.ok() || await page.locator('meta[name="conappt-revision"]').getAttribute('content') !== revision) throw new Error('Website is not running the intended revision');
-  const result = await page.evaluate(async credential => {
-    const { runBenchmark } = await import('/benchmark.js');
-    return runBenchmark(credential);
-  }, token);
+  console.log('Intended website revision loaded; measuring 60 seconds of round trips');
+  let timeout;
+  const result = await Promise.race([
+    page.evaluate(async credential => {
+      const { runBenchmark } = await import('/benchmark.js');
+      return runBenchmark(credential);
+    }, token),
+    new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('Browser benchmark exceeded 90 seconds')), 90_000); }),
+  ]).finally(() => clearTimeout(timeout));
+  console.log(JSON.stringify(result, null, 2));
+  console.log('Verifying published totals and desktop/mobile footer layout');
   if (result.revision !== revision || result.completed < 1) throw new Error('No verified round trips for this release');
   const publicResult = await (await page.request.get(new URL('/api/benchmark', origin).href)).json();
   if (publicResult.completed !== result.completed || publicResult.revision !== revision) throw new Error('Published result does not match measurement');
@@ -35,6 +43,6 @@ try {
     const composer = await page.locator('.composer-wrap').boundingBox();
     if (!composer || composer.y + composer.height > footer.y + 1) throw new Error('Footer overlaps chat composer');
   }
-  console.log(JSON.stringify(result, null, 2));
+  console.log('Published result and footer checks passed');
   if (process.env.GITHUB_STEP_SUMMARY) await writeFile(process.env.GITHUB_STEP_SUMMARY, `### Browser round-trip stress test\n\n${result.completed.toLocaleString('en-US')} completed / 60 seconds, 1024 bytes each direction.\n\nSent: ${result.sent}; not returned before deadline: ${result.uncompleted}; failed requests: ${result.failedRequests}.\n\nSix increasing bursts, 10 seconds apart. Measured transport throughput, excluding chat persistence/queue. Revision: ${revision}.\n`, { flag: 'a' });
 } finally { await browser.close(); }
