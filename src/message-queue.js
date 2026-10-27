@@ -22,7 +22,7 @@ export function validateMessage(payload, tier = 'standard') {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new MessageValidationError('Invalid message.');
   const allowed = new Set(['recipientId', 'title', 'text', 'template', 'image']);
   if (Object.keys(payload).some(key => !allowed.has(key))) throw new MessageValidationError('Unexpected message field.');
-  if (typeof payload.recipientId !== 'string' || !/^\\d{4}-[A-Z]{3}-[A-Z]{3}$/.test(payload.recipientId)) throw new MessageValidationError('Invalid recipient code.');
+  if (typeof payload.recipientId !== 'string' || !/^[0-9]{4}-[A-Z]{3}-[A-Z]{3}$/.test(payload.recipientId)) throw new MessageValidationError('Invalid recipient code.');
   if (typeof payload.title !== 'string' || !payload.title.trim() || typeof payload.text !== 'string' || !payload.text.trim()) throw new MessageValidationError('Title and message text are required.');
   const limits = LIMITS[tier];
   const template = payload.template ?? 'title-text';
