@@ -124,3 +124,7 @@ The business profile settings now group branding, contact info, opening hours, a
 ## In-place business profile editing (0.12.1)
 
 In Business mode open **Bekijk bedrijfsprofiel**, then **Profiel bewerken** to edit public details and action buttons directly on the profile page; saving returns to the profile preview. The standalone public-profile editor was removed from Settings, which retains account credentials, theme, verification, and notification controls. The same profile route in Personal mode is read-only. Changes remain browser-local until authenticated server profiles are available.
+
+## Consistent business logos (0.12.4)
+
+When a company sets a logo, Conappt displays it in its business account selector, account avatar in desktop/mobile navigation, business dashboard, company profile and linked customer conversations. Initials or the existing company icon remain the fallback for businesses without a logo. The existing browser-local logo persistence is unchanged.
