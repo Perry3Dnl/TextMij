@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS encrypted_messages (
   message_type ENUM('title-text','title-text-image') NOT NULL,
   ciphertext VARBINARY(8192) NOT NULL,
   nonce VARBINARY(12) NOT NULL,
+  image_ciphertext VARBINARY(1040) NULL,
+  image_nonce VARBINARY(12) NULL,
   wrapped_key VARBINARY(1024) NOT NULL,
   key_version SMALLINT UNSIGNED NOT NULL,
   tier_at_acceptance ENUM('standard','premium') NOT NULL,
