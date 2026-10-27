@@ -1,0 +1,42 @@
+# Database foundation only. Deploy manually after provisioning credentials/backups.
+# Never connect the database to the shared Caddy/proxy network.
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: textmij
+      MYSQL_USER: textmij
+      MYSQL_PASSWORD_FILE: /run/secrets/mysql_app_password
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
+    secrets:
+      - mysql_app_password
+      - mysql_root_password
+    volumes:
+      - textmij_mysql:/var/lib/mysql
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --silent"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    # Intentionally no ports: MySQL is unreachable from the host/proxy network.
+networks:
+  backend:
+    internal: true
+    name: textmij_backend
+
+volumes:
+  textmij_mysql:
+    name: textmij_mysql_data
+
+secrets:
+  mysql_app_password:
+    file: ${TEXTMIJ_MYSQL_APP_PASSWORD_FILE:?Required local file}
+  mysql_root_password:
+    file: ${TEXTMIJ_MYSQL_ROOT_PASSWORD_FILE:?Required local file}
