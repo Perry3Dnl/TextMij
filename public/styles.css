@@ -349,3 +349,19 @@ h1 { overflow-wrap: anywhere; }
 .verification-plan p { margin: 6px 0 0; color: #647064; font-size: 13px; line-height: 1.6; }
 .verification-plan .field-help { font-size: 11px; }
 @media (max-width: 640px) { .verification-plan { padding: 4px 21px 22px; } .verification-outline { font-size: 9px; } }
+
+/* Business-only chrome; personal navigation and other companies stay neutral. */
+.business-theme-active .nav-link.active { color: var(--business-accent); background: var(--business-tint); }
+.business-theme-active .button:not(.secondary):not(.danger) { background: var(--business-accent); }
+.business-theme-active .business-mark { background: var(--business-tint); color: var(--business-accent); }
+.theme-settings { padding: 2px 24px 24px; }
+.theme-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.theme-option { display: flex; align-items: center; gap: 9px; min-width: 0; padding: 11px; border-radius: 11px; border: 1px solid var(--line); background: white; color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+.theme-option.selected { border-color: var(--business-accent); background: var(--business-tint); }
+.theme-option svg { width: 15px; margin-left: auto; color: var(--business-accent); }
+.theme-swatch { display: inline-block; width: 23px; height: 23px; border-radius: 8px; flex: 0 0 auto; }
+.theme-preview { margin: 17px 0 12px; padding: 17px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.theme-preview strong { color: var(--chat-accent); }
+.theme-preview-bubble { margin: 12px 0 8px auto; width: fit-content; max-width: 90%; padding: 13px 14px; border-radius: 12px 12px 4px 12px; background: var(--chat-tint); color: var(--chat-ink); }
+.theme-preview small { color: var(--muted); }
+@media (max-width: 640px) { .theme-settings { padding: 2px 21px 22px; } .theme-options { grid-template-columns: 1fr; } }
