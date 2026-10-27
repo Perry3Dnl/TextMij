@@ -590,3 +590,11 @@ body.customer-company-chat-theme .chat-panel .chat-business-detail { color: var(
 .business-settings-link span { margin-left:auto; font-size:11px; color:var(--muted); font-weight:500; }
 #public-company-profile-settings, #company-theme-settings, #company-action-settings { scroll-margin-top:24px; }
 @media(max-width:760px) { .business-settings-tools { grid-template-columns:1fr; } .business-settings-panel {padding:20px;} }
+
+/* Company owner edits the same page visitors see; private controls are absent for visitors. */
+.company-profile-toolbar { display:flex;align-items:center;justify-content:space-between;gap:16px; }
+.company-profile-edit { min-width:0; }
+.company-profile-edit > .settings-card { overflow:hidden; }
+.company-profile-edit .company-profile-form { color:var(--ink); }
+.company-profile-edit .company-editor-panel { background:var(--white); }
+@media(max-width:640px){.company-profile-toolbar { flex-wrap:wrap; }}
