@@ -1,5 +1,30 @@
 export const STORAGE_KEY = 'textmij.preview.v1';
 export const VERIFY_PRICE_EUR = 20;
+// Public profile data is deliberately separate from private account credentials.
+// This browser preview stores profiles locally; remote sync requires server ownership checks.
+export const PROFILE_DAYS = ['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'];
+export function safeExternalUrl(value) {
+  if (typeof value !== 'string' || !value.trim()) return '';
+  try {
+    const url = new URL(value.trim());
+    return (url.protocol === 'https:' && !url.username && !url.password && value.length <= 300) ? url.href : '';
+  } catch { return ''; }
+}
+export function cleanBusinessProfile(input = {}) {
+  const text = (v,n) => typeof v === 'string' ? Array.from(v.trim()).slice(0,n).join('') : '';
+  const phone = text(input.phone,35);
+  const socials = {};
+  for (const key of ['instagram','facebook','linkedin']) socials[key] = safeExternalUrl(input.socials?.[key]);
+  const hours = {};
+  for (const day of PROFILE_DAYS) hours[day] = text(input.hours?.[day],60);
+  const actions = Array.isArray(input.actions) ? input.actions.slice(0,3).map((a) => ({
+    label: text(a?.label,35), url: safeExternalUrl(a?.url),
+  })).filter(a => a.label && a.url) : [];
+  const logo = typeof input.logo === 'string' && /^data:image\/(png|jpeg|webp);base64,[a-zA-Z0-9+/]+=*$/.test(input.logo) && input.logo.length <= 140000 ? input.logo : '';
+  return { description:text(input.description,500), phone:/^[+0-9().\s-]{0,35}$/.test(phone) ? phone : '', website:safeExternalUrl(input.website),
+    socials, hours, actions, logo };
+}
+
 export const BUSINESS_THEMES = Object.freeze({
   white: Object.freeze({ label: 'Wit', accent: '#42633b', tint: '#e9f1e5', ink: '#304b2b', background: '#ffffff', foreground: '#263326' }),
   black: Object.freeze({ label: 'Zwart (dark mode)', accent: '#a3d995', tint: '#263c30', ink: '#ecf7eb', background: '#161c19', foreground: '#f4f8f3' }),
@@ -108,7 +133,7 @@ export function escapeHtml(value) {
 export function freshState(now = Date.now()) {
   return {
     version: 1, mode: 'personal', name: 'Robin', startedAt: now,
-    business: { name: 'Studio Noord', email: 'hallo@studio-noord.example', demoVerification: 'inactive', theme: DEFAULT_BUSINESS_THEME, customTheme: { accent: '#245c91', tint: '#e5f1fc', ink: '#173e65', background: '#ffffff', foreground: '#263326' } },
+    business: { name: 'Studio Noord', email: 'hallo@studio-noord.example', profile: cleanBusinessProfile(), demoVerification: 'inactive', theme: DEFAULT_BUSINESS_THEME, customTheme: { accent: '#245c91', tint: '#e5f1fc', ink: '#173e65', background: '#ffffff', foreground: '#263326' } },
     preferences: { notifications: true, sound: false, previews: true },
     read: [], readBusiness: [], muted: [], mutedBusiness: [],
     unreadPersonal: {}, unreadBusiness: {}, customers: [], replies: {},
@@ -126,6 +151,7 @@ export function restoreState(raw, now = Date.now()) {
     if (typeof data.name === 'string' && data.name.trim()) state.name = Array.from(data.name.trim()).slice(0, 60).join('');
     if (typeof data.business?.name === 'string' && data.business.name.trim()) state.business.name = Array.from(data.business.name.trim()).slice(0, 80).join('');
     if (typeof data.business?.email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.business.email) && data.business.email.length <= 254) state.business.email = data.business.email;
+    state.business.profile = cleanBusinessProfile(data.business?.profile);
     if (['inactive', 'active'].includes(data.business?.demoVerification)) state.business.demoVerification = data.business.demoVerification;
     if (validThemeColors(data.business?.customTheme)) state.business.customTheme = { ...data.business.customTheme };
     if (Object.hasOwn(BUSINESS_THEMES, data.business?.theme ?? '')) state.business.theme = data.business.theme;
