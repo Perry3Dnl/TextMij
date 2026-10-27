@@ -74,3 +74,7 @@ queue.enqueue(authenticatedBusinessId, { recipientId: '7483-RGY-RCH', title: 'Up
 ```
 
 There is deliberately **no publicly writable message endpoint** yet: identity, recipient sessions, persistence, and payment-webhook-derived entitlements do not exist. A local browser `demoVerification` flag never gives a sender Premium server privileges. A verified blue company mark and name reservation are separate, future server-controlled features. This module is not a per-sender requests-per-second throttle; it enforces content sizes and **global dispatch cadence**. Implement per-identity ingress rate limits and HTTP request-body caps when introducing the authenticated API.
+
+## Storage encryption foundation
+
+A MySQL 8.4 Docker Compose configuration on an isolated internal network, an encrypted-envelope schema, and server-side ciphertext validation are staged for review. The database is **not deployed** and the app is **not E2EE-enabled** yet. See [E2EE design and rollout requirements](docs/E2EE.md). The shared reverse proxy does not have database access. Release version: 0.5.0.
