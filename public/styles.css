@@ -365,3 +365,15 @@ h1 { overflow-wrap: anywhere; }
 .theme-preview-bubble { margin: 12px 0 8px auto; width: fit-content; max-width: 90%; padding: 13px 14px; border-radius: 12px 12px 4px 12px; background: var(--chat-tint); color: var(--chat-ink); }
 .theme-preview small { color: var(--muted); }
 @media (max-width: 640px) { .theme-settings { padding: 2px 21px 22px; } .theme-options { grid-template-columns: 1fr; } }
+
+.chat-panel { background: var(--chat-background, white); color: var(--chat-foreground, var(--ink)); }
+.chat-panel .chat-header, .chat-panel .composer-wrap { background: var(--chat-background, white); color: var(--chat-foreground, var(--ink)); }
+.chat-panel .chat-business-name, .chat-panel .chat-business-detail, .chat-panel .message-text { color: inherit; }
+.chat-panel .thread { background: var(--chat-background, white); }
+.theme-preview { background: var(--chat-background, white); color: var(--chat-foreground, var(--ink)); }
+.theme-preview strong { color: var(--chat-foreground, var(--ink)); }
+.theme-custom-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.theme-color-field { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; }
+.theme-color-field input { width: 44px; height: 36px; border: 1px solid var(--line); border-radius: 6px; background: transparent; cursor: pointer; }
+.theme-custom-fields .button { width: fit-content; }
+@media (max-width: 640px) { .theme-custom-fields { grid-template-columns: 1fr; } }
