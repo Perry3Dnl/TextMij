@@ -15,8 +15,10 @@ export function validThemeColors(colors) {
 export function setBusinessTheme(state, theme, colors) {
   if (!Object.hasOwn(BUSINESS_THEMES, theme)) return false;
   if (theme === 'custom') {
-    if (!validThemeColors(colors)) return false;
-    state.business.customTheme = { ...colors };
+    if (colors !== undefined) {
+      if (!validThemeColors(colors)) return false;
+      state.business.customTheme = { ...colors };
+    } else if (!validThemeColors(state.business.customTheme)) return false;
   }
   state.business.theme = theme;
   return true;

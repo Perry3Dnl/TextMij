@@ -377,3 +377,13 @@ h1 { overflow-wrap: anywhere; }
 .theme-color-field input { width: 44px; height: 36px; border: 1px solid var(--line); border-radius: 6px; background: transparent; cursor: pointer; }
 .theme-custom-fields .button { width: fit-content; }
 @media (max-width: 640px) { .theme-custom-fields { grid-template-columns: 1fr; } }
+
+/* Consistent contrast and an actual themed chat preview. */
+.theme-option.selected { background: var(--business-tint); color: #192d21; }
+.business-theme-active .theme-option.selected { color: #192d21; }
+.theme-option.selected:focus-visible, .theme-color-field input:focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+.theme-preview { background: var(--chat-background) !important; color: var(--chat-foreground) !important; }
+.theme-preview strong { color: var(--chat-foreground) !important; }
+.theme-preview small { color: var(--chat-foreground); opacity: .8; }
+.theme-preview-bubble { background: var(--chat-tint); color: var(--chat-ink); }
+.chat-panel .chat-demo-strip, .chat-panel .chat-business-detail, .chat-panel .composer-help { color: var(--chat-foreground); opacity: .8; }
