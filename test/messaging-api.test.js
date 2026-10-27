@@ -26,7 +26,7 @@ function fakeDatabase() {
           tier_at_acceptance,queued_at:new Date(),status:'dispatched'});
         return [{affectedRows:1}];
       }
-      if (sql.startsWith('SELECT id, payload_hash')) return [[...messages].filter(a=>a.sender_business_id===args[0] && a.idempotency_key===args[1]).at(-1)];
+      if (sql.startsWith('SELECT id, payload_hash')) return [[messages.filter(a=>a.sender_business_id===args[0] && a.idempotency_key===args[1]).at(-1)]];
       if (sql.includes("AND status = 'dispatched'")) return [messages.filter(m=>m.recipient_device_id===args[0] && m.id>args[1])];
       throw new Error('Unmocked SQL '+sql);
     }
