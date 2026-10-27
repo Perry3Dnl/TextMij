@@ -1,5 +1,23 @@
 export const STORAGE_KEY = 'textmij.preview.v1';
 export const VERIFY_PRICE_EUR = 20;
+export const BUSINESS_THEMES = Object.freeze({
+  sage: Object.freeze({ label: 'Saliegroen', accent: '#42633b', tint: '#e9f1e5', ink: '#304b2b' }),
+  ocean: Object.freeze({ label: 'Oceaanblauw', accent: '#245c91', tint: '#e5f1fc', ink: '#173e65' }),
+  plum: Object.freeze({ label: 'Pruim', accent: '#7b4684', tint: '#f5e9f5', ink: '#603168' }),
+  terracotta: Object.freeze({ label: 'Terracotta', accent: '#9a492d', tint: '#fbece4', ink: '#72361f' }),
+});
+export const DEFAULT_BUSINESS_THEME = 'sage';
+export function setBusinessTheme(state, theme) {
+  if (!Object.hasOwn(BUSINESS_THEMES, theme)) return false;
+  state.business.theme = theme;
+  return true;
+}
+export function businessThemeFor(state, id, mode = state.mode) {
+  // The preview's business owns all of its customer sessions. On the personal side
+  // only Studio Noord is linked to that business; other mock companies are separate.
+  if (mode === 'business' || id === 'studio-noord') return BUSINESS_THEMES[state.business.theme] || BUSINESS_THEMES[DEFAULT_BUSINESS_THEME];
+  return BUSINESS_THEMES[DEFAULT_BUSINESS_THEME];
+}
 export const DEMO_CODE = '7483-RGY-RCH';
 // Independent limits: increasing one must never change the other.
 export const MESSAGE_LIMITS = Object.freeze({ business: 1024, customer: 1024 });
@@ -78,7 +96,7 @@ export function escapeHtml(value) {
 export function freshState(now = Date.now()) {
   return {
     version: 1, mode: 'personal', name: 'Robin', startedAt: now,
-    business: { name: 'Studio Noord', email: 'hallo@studio-noord.example', demoVerification: 'inactive' },
+    business: { name: 'Studio Noord', email: 'hallo@studio-noord.example', demoVerification: 'inactive', theme: DEFAULT_BUSINESS_THEME },
     preferences: { notifications: true, sound: false, previews: true },
     read: [], readBusiness: [], muted: [], mutedBusiness: [],
     unreadPersonal: {}, unreadBusiness: {}, customers: [], replies: {},
@@ -97,6 +115,7 @@ export function restoreState(raw, now = Date.now()) {
     if (typeof data.business?.name === 'string' && data.business.name.trim()) state.business.name = Array.from(data.business.name.trim()).slice(0, 80).join('');
     if (typeof data.business?.email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.business.email) && data.business.email.length <= 254) state.business.email = data.business.email;
     if (['inactive', 'active'].includes(data.business?.demoVerification)) state.business.demoVerification = data.business.demoVerification;
+    if (Object.hasOwn(BUSINESS_THEMES, data.business?.theme ?? '')) state.business.theme = data.business.theme;
     if (Array.isArray(data.customers)) {
       const knownCodes = new Set(contactsFor(state, 'business').map((customer) => customer.code));
       for (const customer of data.customers.slice(0, 200)) {
