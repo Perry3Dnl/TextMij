@@ -73,9 +73,14 @@ function route() {
   return { page, id };
 }
 
+function companyLogo(className = '', alt = '') {
+  const logo = state.business.profile.logo;
+  return logo ? `<img class="${className}" src="${logo}" alt="${html(alt)}">` : '';
+}
+
 function avatar(business, extra = '') {
-  if (!isBusiness() && business.id === 'studio-noord' && state.business.profile.logo) {
-    return `<img class="avatar company-avatar ${extra}" src="${state.business.profile.logo}" alt="" aria-hidden="true">`;
+  if (business.id === 'studio-noord' && state.business.profile.logo) {
+    return companyLogo(`avatar company-avatar ${extra}`);
   }
   return `<span class="avatar ${business.color} ${extra}" aria-hidden="true">${html(business.initials)}</span>`;
 }
@@ -106,7 +111,7 @@ function updateNavigation() {
   document.querySelector('.mobile-navigation').innerHTML = markup;
   const profileName = isBusiness() ? state.business.name : state.name;
   document.querySelectorAll('[data-profile-name]').forEach((element) => { element.textContent = profileName; });
-  document.querySelectorAll('[data-profile-initial]').forEach((element) => { element.textContent = Array.from(profileName)[0]?.toLocaleUpperCase('nl') || 'J'; });
+  document.querySelectorAll('[data-profile-initial]').forEach((element) => { if (isBusiness() && state.business.profile.logo) { element.innerHTML = companyLogo('profile-logo-image'); } else { element.textContent = Array.from(profileName)[0]?.toLocaleUpperCase('nl') || 'J'; } });
   document.querySelectorAll('[data-profile-role]').forEach((element) => { element.textContent = isBusiness() ? 'Zakelijk · wissel account' : 'Persoonlijk · wissel account'; });
   document.querySelectorAll('[data-mode-label]').forEach((element) => { element.textContent = isBusiness() ? 'Zakelijk' : 'Persoonlijk'; });
   document.querySelectorAll('[data-mode-icon]').forEach((element) => { element.innerHTML = icon(isBusiness() ? 'business' : 'person'); });
@@ -190,7 +195,7 @@ function renderSettings() {
 function renderBusinessHome() {
   const recent = conversationsFor(state).slice(0, 3);
   main.innerHTML = `${pageHeader('Korte lijntjes met je klanten.', 'Updates versturen, vragen beantwoorden. Gewoon hier.', 'JOUW BEDRIJF')}
-    <div class="home-grid"><section class="card code-card business-home-card"><div class="card-heading"><h2 class="card-label">JE ZAKELIJKE PROFIEL</h2><span class="sample-label">Voorbeeld</span></div><div class="business-identity"><span class="business-mark">${icon('business')}</span><div><h2>${html(state.business.name)} ${verificationLabel()}</h2><p>${html(state.business.email)}</p></div></div><p class="code-description">Een bevestiging of een korte update?<br>Vraag om de Conappt-code van je klant en begin.</p><div class="code-actions"><button class="button" data-action="new-customer">${icon('plus')}Nieuw gesprek</button><a class="button secondary" href="#gesprekken">Je klanten ${icon('arrow')}</a></div><div class="device-note">${icon('phone')}Alles vanuit dezelfde app</div></section>
+    <div class="home-grid"><section class="card code-card business-home-card"><div class="card-heading"><h2 class="card-label">JE ZAKELIJKE PROFIEL</h2><span class="sample-label">Voorbeeld</span></div><div class="business-identity"><span class="business-mark">${state.business.profile.logo ? companyLogo('business-logo-image') : icon('business')}</span><div><h2>${html(state.business.name)} ${verificationLabel()}</h2><p>${html(state.business.email)}</p></div></div><p class="code-description">Een bevestiging of een korte update?<br>Vraag om de Conappt-code van je klant en begin.</p><div class="code-actions"><button class="button" data-action="new-customer">${icon('plus')}Nieuw gesprek</button><a class="button secondary" href="#gesprekken">Je klanten ${icon('arrow')}</a></div><div class="device-note">${icon('phone')}Alles vanuit dezelfde app</div></section>
     <div class="home-secondary"><section class="card how-card"><h2>Een bericht is zo geregeld.</h2><ol class="how-list"><li><span class="step-number">1</span><div><strong>Vraag om de code</strong><p>Je klant vindt die op zijn eigen Home.</p></div></li><li><span class="step-number">2</span><div><strong>Stuur een update</strong><p>Een titel, je bericht en klaar.</p></div></li><li><span class="step-number">3</span><div><strong>Houd contact</strong><p>Antwoorden komen in hetzelfde gesprek.</p></div></li></ol></section><section class="card quiet-card"><div class="icon-orbit">${icon('chat')}</div><h3>Geen eigen website nodig.</h3><p>Gebruik Conappt voor jezelf én voor je bedrijf. Wisselen kan altijd via je profiel.</p><button class="text-link plain-button" data-action="switch-account">Wissel van account ${icon('arrow')}</button></section></div>
     <section class="home-recent"><div class="section-heading"><h2>Je laatste klantgesprekken</h2><a class="text-link" href="#gesprekken">Bekijk alles ${icon('arrow')}</a></div><div class="card conversation-list">${recent.map(conversationRow).join('')}</div></section></div>${previewNote()}`;
 }
@@ -324,7 +329,7 @@ function openDialog(content) {
 }
 
 function openAccountSwitcher() {
-  const choice = (mode, name, detail, symbol) => `<button class="account-choice ${state.mode === mode ? 'selected' : ''}" type="button" data-action="choose-account" data-mode="${mode}" aria-pressed="${state.mode === mode}"><span class="account-choice-icon">${icon(symbol)}</span><span class="account-choice-copy"><strong>${html(name)}</strong><small>${detail}</small></span>${state.mode === mode ? icon('check') : ''}</button>`;
+  const choice = (mode, name, detail, symbol) => `<button class="account-choice ${state.mode === mode ? 'selected' : ''}" type="button" data-action="choose-account" data-mode="${mode}" aria-pressed="${state.mode === mode}"><span class="account-choice-icon">${mode === 'business' && state.business.profile.logo ? companyLogo('account-logo-image') : icon(symbol)}</span><span class="account-choice-copy"><strong>${html(name)}</strong><small>${detail}</small></span>${state.mode === mode ? icon('check') : ''}</button>`;
   openDialog(`<h2>Wissel van account</h2><p>Voor jezelf of voor je bedrijf. Je gebruikt gewoon dezelfde app.</p><div class="account-choices">${choice('personal', state.name, 'Persoonlijk profiel', 'person')}${choice('business', state.business.name, 'Zakelijk profiel · voorbeeld', 'business')}</div><p class="dialog-note">Deze voorbeeldaccounts staan alleen op dit apparaat.</p><div class="dialog-actions"><button class="button secondary" data-action="close-dialog">Sluiten</button></div>`);
 }
 
