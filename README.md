@@ -132,3 +132,7 @@ When a company sets a logo, Conappt displays it in its business account selector
 ## Title-free business chat replies (0.12.5)
 
 Within an existing business conversation, the message composer now has just one text field, like the customer's composer. Structured title/text templates and their strict validator remain available for future outbound updates and API use. Previously sent messages with titles still render their titles. Messages remain browser-local in the preview.
+
+## Logo image processing (0.12.6)
+
+The browser accepts any image type it can decode (up to a 50 MB input safety cap), center-crops it to a square, then downscales/compresses to a maximum **100 KiB** WebP or JPEG before storing the result in the existing local preview profile. SVG documents are never inserted as executable markup. The source image is not retained. Server-backed business logo hosting and cross-device synchronization are **not implemented yet** because the live browser preview has no authenticated profile upload API or persistent media volume; an unauthenticated public upload endpoint must not be introduced.

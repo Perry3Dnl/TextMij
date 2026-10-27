@@ -16,6 +16,7 @@ const assets = new Map([
   ['/app.js', ['app.js', 'text/javascript']],
   ['/model.js', ['model.js', 'text/javascript']],
   ['/crypto.js', ['crypto.js', 'text/javascript']],
+  ['/logo.js', ['logo.js', 'text/javascript']],
   ['/icon.svg', ['icon.svg', 'image/svg+xml']],
 ].map(([path, [file, type]]) => [path, {
   body: readFileSync(new URL(`../public/${file}`, import.meta.url)),
