@@ -29,7 +29,7 @@ PY
 export TEXTMIJ_MYSQL_APP_PASSWORD_FILE="$tmp/app.secret"
 export TEXTMIJ_MYSQL_ROOT_PASSWORD_FILE="$tmp/root.secret"
 # Docker Compose file secrets are bind mounts, so grant only the Node UID access.
-docker run --rm --user 0:0 --network none --cap-drop ALL --cap-add CHOWN --cap-add FOWNER \
+docker run --rm --user 0:0 --network none --cap-drop ALL --cap-add CHOWN --cap-add FOWNER --cap-add DAC_OVERRIDE \
   --security-opt no-new-privileges:true --mount "type=bind,source=$tmp,target=/private-secrets" \
   --entrypoint sh "textmij:$GITHUB_SHA" -c \
   'chown 1000:1000 /private-secrets/app.secret && chmod 0400 /private-secrets/app.secret'
