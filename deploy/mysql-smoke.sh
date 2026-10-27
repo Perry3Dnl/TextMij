@@ -7,10 +7,16 @@ tmp="$(mktemp -d)"
 db=(docker compose -p textmij-ci-db -f deploy/mysql.compose.yml -f "$tmp/mysql.override.yml")
 api=(docker compose -p textmij-ci-api -f deploy/compose.yml -f deploy/api.messaging.compose.yml -f "$tmp/api.override.yml")
 cleanup() {
+  status=$?
+  if [ "$status" -ne 0 ]; then
+    "${db[@]}" logs --no-color --tail 100 mysql >&2 || true
+    "${api[@]}" logs --no-color --tail 100 api >&2 || true
+  fi
   "${api[@]}" down --remove-orphans >/dev/null 2>&1 || true
   "${db[@]}" down --remove-orphans --volumes >/dev/null 2>&1 || true
   docker network rm textmij-ci-messaging-proxy >/dev/null 2>&1 || true
   rm -rf -- "$tmp"
+  exit "$status"
 }
 trap cleanup EXIT
 python3 - "$tmp" <<'PY'
