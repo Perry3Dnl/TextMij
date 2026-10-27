@@ -54,6 +54,7 @@ docker exec -i "$TEXTMIJ_CONTAINER" node --input-type=module <<'JS'
 import assert from 'node:assert/strict';
 import { generateDeviceKeyPair, exportDevicePublicKey, encryptForRecipient, decryptFromSender } from './public/crypto.js';
 const url='http://127.0.0.1:3000';
+assert.equal((await fetch(url+'/api/ready')).status,200);
 const post=(path, body, token)=>fetch(url+path,{method:'POST',headers:{'content-type':'application/json',...(token?{authorization:'Bearer '+token}:{})},body:JSON.stringify(body)});
 const keysA=await generateDeviceKeyPair(), keysB=await generateDeviceKeyPair();
 const publicA=await exportDevicePublicKey(keysA.publicKey), publicB=await exportDevicePublicKey(keysB.publicKey);
