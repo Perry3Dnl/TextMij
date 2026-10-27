@@ -37,6 +37,7 @@ try { raw = localStorage.getItem(STORAGE_KEY); } catch { /* Private browsing can
 let state = restoreState(raw);
 let query = '';
 let unreadOnly = false;
+let editingCompanyProfile = false;
 const drafts = new Map();
 const titleDrafts = new Map();
 const main = document.querySelector('#main');
@@ -215,7 +216,7 @@ function renderCompanyProfile(id) {
   const theme = businessThemeFor(state, id, 'personal');
   const external = (label,url) => url ? `<a class="button secondary" href="${html(url)}" target="_blank" rel="noopener noreferrer">${html(label)} ↗</a>` : '';
   const hours = PROFILE_DAYS.map(day => profile.hours[day] ? `<div class="company-hour"><strong>${day}</strong><span>${html(profile.hours[day])}</span></div>` : '').join('');
-  main.innerHTML = `<section class="company-profile" style="${themeStyle(theme)}"><a class="text-link" href="#gesprek/${id}">← Terug naar gesprek</a><div class="company-profile-hero">${profile.logo ? `<img class="company-logo" src="${profile.logo}" alt="Logo van ${html(contact.name)}">` : avatar(contact,'company-logo-fallback')}<div><h1>${html(contact.name)}${verificationLabel()}</h1><p>${html(profile.description || 'Welkom bij ons bedrijfsprofiel.')}</p></div></div><div class="company-profile-grid"><section class="card company-profile-section"><h2>Contact</h2>${profile.phone ? `<p>Telefoon: <a href="tel:${html(profile.phone.replace(/[^+0-9]/g,''))}">${html(profile.phone)}</a></p>` : ''}<p>E-mail: <a href="mailto:${html(state.business.email)}">${html(state.business.email)}</a></p><div class="company-actions">${external('Website',profile.website)}${Object.entries(profile.socials).map(([name,url])=>external(name[0].toUpperCase()+name.slice(1),url)).join('')}</div></section><section class="card company-profile-section"><h2>Openingstijden</h2>${hours || '<p>Geen openingstijden opgegeven.</p>'}</section></div>${profile.actions.length ? `<section class="card company-profile-section company-actions-panel"><h2>Wat wil je doen?</h2><p>Deze knoppen openen een bestaande dienst van het bedrijf. Conappt neemt geen afspraken of reserveringen over.</p><div class="company-actions company-action-buttons">${profile.actions.map(item=>`<a class="button company-action-button" href="${html(item.url)}" target="_blank" rel="noopener noreferrer">${html(item.label)} ${icon('arrow')}</a>`).join('')}</div></section>` : ''}<p class="field-help">Voorbeeldprofiel · gegevens alleen op dit apparaat opgeslagen</p></section>`;
+  main.innerHTML = `<section class="company-profile" style="${themeStyle(theme)}"><div class="company-profile-toolbar"><a class="text-link" href="${isBusiness() ? '#home' : '#gesprek/'+id}">← ${isBusiness() ? 'Terug naar bedrijf' : 'Terug naar gesprek'}</a>${isBusiness() ? `<button class="button ${editingCompanyProfile ? 'secondary' : ''}" type="button" data-action="toggle-company-profile-edit">${editingCompanyProfile ? 'Annuleren' : 'Profiel bewerken'}</button>` : ''}</div>${isBusiness() && editingCompanyProfile ? `<div class="company-profile-edit">${businessProfileEditor()}</div>` : ''}<div class="company-profile-hero">${profile.logo ? `<img class="company-logo" src="${profile.logo}" alt="Logo van ${html(contact.name)}">` : avatar(contact,'company-logo-fallback')}<div><h1>${html(contact.name)}${verificationLabel()}</h1><p>${html(profile.description || 'Welkom bij ons bedrijfsprofiel.')}</p></div></div><div class="company-profile-grid"><section class="card company-profile-section"><h2>Contact</h2>${profile.phone ? `<p>Telefoon: <a href="tel:${html(profile.phone.replace(/[^+0-9]/g,''))}">${html(profile.phone)}</a></p>` : ''}<p>E-mail: <a href="mailto:${html(state.business.email)}">${html(state.business.email)}</a></p><div class="company-actions">${external('Website',profile.website)}${Object.entries(profile.socials).map(([name,url])=>external(name[0].toUpperCase()+name.slice(1),url)).join('')}</div></section><section class="card company-profile-section"><h2>Openingstijden</h2>${hours || '<p>Geen openingstijden opgegeven.</p>'}</section></div>${profile.actions.length ? `<section class="card company-profile-section company-actions-panel"><h2>Wat wil je doen?</h2><p>Deze knoppen openen een bestaande dienst van het bedrijf. Conappt neemt geen afspraken of reserveringen over.</p><div class="company-actions company-action-buttons">${profile.actions.map(item=>`<a class="button company-action-button" href="${html(item.url)}" target="_blank" rel="noopener noreferrer">${html(item.label)} ${icon('arrow')}</a>`).join('')}</div></section>` : ''}<p class="field-help">Voorbeeldprofiel · gegevens alleen op dit apparaat opgeslagen</p></section>`;
 }
 function businessProfileEditor() {
   const profile = state.business.profile;
@@ -232,11 +233,10 @@ function businessProfileEditor() {
 function renderBusinessSettings() {
   main.innerHTML = `${pageHeader('Je bedrijf, jouw voorkeuren.', 'Je zakelijke profiel en meldingen op één plek.', 'ZAKELIJKE INSTELLINGEN')}
     <div class="settings-layout"><div><section class="card settings-card"><div class="settings-section-heading"><h2>Je bedrijfsprofiel</h2><p>Deze voorbeeldgegevens worden lokaal bewaard.</p></div><form class="profile-form" id="business-profile-form"><label class="field-label" for="business-name">Bedrijfsnaam</label><input class="text-input" id="business-name" name="business-name" value="${html(state.business.name)}" maxlength="80" autocomplete="organization" required><label class="field-label extra-field" for="business-email">E-mailadres</label><input class="text-input" id="business-email" name="business-email" type="email" value="${html(state.business.email)}" maxlength="254" autocomplete="email" required><div class="form-footer"><p class="field-help">Alleen een bedrijfsnaam en e-mailadres.</p><button class="button" type="submit">Opslaan</button></div><p class="form-error" id="business-error" role="alert" hidden></p></form></section>
-    ${businessProfileEditor()}
     ${businessThemePicker()}
     <section class="card settings-card"><div class="settings-section-heading"><h2>Bedrijfsverificatie</h2><p>Geef je bedrijfsnaam een herkenbare blauwe rand. €${VERIFY_PRICE_EUR} per maand wanneer betalingen echt worden ingeschakeld.</p></div><div class="verification-plan"><div><strong>${hasDemoVerification(state) ? 'Demo-verificatie actief' : 'Gratis bedrijfsprofiel'}</strong><p>${hasDemoVerification(state) ? 'De blauwe demo-markering is zichtbaar. Er is geen identiteit gecontroleerd en niets afgeschreven.' : 'Berichten en klantgesprekken blijven gratis. Probeer de markering zonder afschrijving.'}</p></div>${verificationLabel()}<button class="button ${hasDemoVerification(state) ? 'secondary' : ''}" type="button" data-action="${hasDemoVerification(state) ? 'cancel-verification' : 'start-verification'}">${hasDemoVerification(state) ? 'Demo-verificatie uitschakelen' : 'Probeer verificatie · €20/maand'}</button><p class="field-help">Demo: geen echte betaling, abonnement of controle van bedrijfsgegevens.</p></div></section>
     <section class="card settings-card"><div class="settings-section-heading"><h2>Meldingen</h2><p>Deze apparaatvoorkeuren gelden voor beide profielen. In dit voorbeeld worden nog geen meldingen verstuurd.</p></div>${switchRow('notifications', 'Nieuwe berichten', 'Een melding wanneer een klant reageert.')}${switchRow('sound', 'Een geluidje erbij', 'Een subtiele toon bij een nieuw bericht.')}${switchRow('previews', 'Berichtvoorbeeld tonen', 'Laat een stukje van het bericht in de melding zien.')}</section></div>
-    <aside class="business-settings-tools"><section class="card business-settings-panel"><h2>Jouw bedrijfsprofiel</h2><p>Bekijk wat een klant ziet en pas direct je profiel aan.</p><a class="button" href="#bedrijf/studio-noord">Bekijk bedrijfsprofiel ${icon('arrow')}</a><a class="business-settings-link" href="#instellingen" data-scroll-target="public-company-profile-settings">${icon('business')} Profiel bewerken</a></section><section class="card business-settings-panel"><h2>Snelle instellingen</h2><p>Ga rechtstreeks naar de onderdelen die je gebruikt.</p><a class="business-settings-link" href="#instellingen" data-scroll-target="company-action-settings">${icon('arrow')} Actieknoppen beheren <span>${state.business.profile.actions.length}/3</span></a><a class="business-settings-link" href="#instellingen" data-scroll-target="company-theme-settings">${icon('settings')} Thema aanpassen <span>${html(state.business.theme === 'black' ? 'Donker' : state.business.theme === 'custom' ? 'Eigen kleuren' : 'Wit')}</span></a></section></aside></div>${previewNote()}`;
+    <aside class="business-settings-tools"><section class="card business-settings-panel"><h2>Jouw bedrijfsprofiel</h2><p>Bekijk wat een klant ziet en pas direct je profiel aan.</p><a class="button" href="#bedrijf/studio-noord">Bekijk bedrijfsprofiel ${icon('arrow')}</a><a class="business-settings-link" href="#bedrijf/studio-noord" data-edit-company-profile="true">${icon('business')} Profiel bewerken</a></section><section class="card business-settings-panel"><h2>Snelle instellingen</h2><p>Ga rechtstreeks naar de onderdelen die je gebruikt.</p><a class="business-settings-link" href="#instellingen" data-scroll-target="company-action-settings">${icon('arrow')} Actieknoppen beheren <span>${state.business.profile.actions.length}/3</span></a><a class="business-settings-link" href="#instellingen" data-scroll-target="company-theme-settings">${icon('settings')} Thema aanpassen <span>${html(state.business.theme === 'black' ? 'Donker' : state.business.theme === 'custom' ? 'Eigen kleuren' : 'Wit')}</span></a></section></aside></div>${previewNote()}`;
 }
 
 function renderMessage(message, business) {
@@ -352,6 +352,12 @@ async function copyCode() {
 
 document.addEventListener('click', async (event) => {
   if (event.target.closest('.skip-link')) { event.preventDefault(); main.focus(); return; }
+  const editProfileLink = event.target.closest('[data-edit-company-profile]');
+  if (editProfileLink && isBusiness()) {
+    editingCompanyProfile = true;
+    if (location.hash === '#bedrijf/studio-noord') { event.preventDefault(); render(true); }
+    return;
+  }
   const scrollLink = event.target.closest('[data-scroll-target]');
   if (scrollLink) {
     event.preventDefault();
@@ -381,7 +387,11 @@ document.addEventListener('click', async (event) => {
   if (!button) return;
   const action = button.dataset.action;
   if (action === 'switch-account') openAccountSwitcher();
-  else if (action === 'add-profile-action') {
+  else if (action === 'toggle-company-profile-edit') {
+    if (!isBusiness() || route().page !== 'bedrijf' || route().id !== 'studio-noord') return;
+    editingCompanyProfile = !editingCompanyProfile;
+    render(true);
+  } else if (action === 'add-profile-action') {
     const container=document.querySelector('#profile-action-editors');
     const count=container?.querySelectorAll('.action-editor').length ?? 0;
     if (!container || count>=3) return;
@@ -491,7 +501,7 @@ document.addEventListener('submit', (event) => {
     const value=id=>document.getElementById(id).value;
     const actions=Array.from(document.querySelectorAll('#profile-action-editors .action-editor')).map((row,i)=>({label:value('action-label-'+i),url:value('action-url-'+i)}));
     const profile=cleanBusinessProfile({ ...state.business.profile, description:value('company-description'),phone:value('company-phone'),website:value('company-website'),socials:Object.fromEntries(['instagram','facebook','linkedin'].map(k=>[k,value('social-'+k)])),hours:Object.fromEntries(PROFILE_DAYS.map(d=>[d,value('hours-'+d)])),actions });
-    state.business.profile=profile;const saved=persist();render(true);if(saved)toast('Bedrijfsprofiel opgeslagen op dit apparaat.');
+    state.business.profile=profile;const saved=persist();editingCompanyProfile=false;render(true);if(saved)toast('Bedrijfsprofiel opgeslagen op dit apparaat.');
   } else if (event.target.id === 'business-theme-form') {
     event.preventDefault();
     if (!isBusiness()) return;
