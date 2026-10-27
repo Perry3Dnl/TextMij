@@ -100,3 +100,5 @@ The Node server can now register accounts, authenticate bearer tokens, accept va
 ## Business chat themes (preview)
 
 In business mode, **Instellingen → Bedrijfsthema** offers four accessible predefined color palettes. The selection is saved in the browser and changes the business-mode accent and the chat session colors. In the linked Studio Noord customer conversation, the same theme appears when switching back to personal mode. Other demonstration businesses remain unchanged. Themes are deliberately constrained to vetted palettes instead of accepting arbitrary CSS, protecting contrast and avoiding CSS injection. Multi-device and cross-user synchronization requires the future authenticated business-profile API; a separate customer's browser cannot receive the changes yet.
+
+Theme choices now include White, Black (dark mode), and Custom. Custom exposes saved accent, message bubble background/text, chat background and text colors. These persist in local preview state and are applied to the linked customer chat. Remote customer synchronization still needs the business profile backend.
