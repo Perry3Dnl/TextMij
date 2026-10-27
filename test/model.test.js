@@ -248,6 +248,8 @@ test('company profile validates external links and persists optional public fiel
   assert.equal(safeExternalUrl('http://example.com'), '');
   assert.equal(safeExternalUrl('https://user:pass@example.com'), '');
   const profile=cleanBusinessProfile({description:'Garage onderhoud',phone:'+31 45 123 4567',website:'https://garage.example/afspraak',hours:{Maandag:'09:00–17:00'},actions:[{label:'Afspraak maken',url:'https://garage.example/afspraak'},{label:'Onveilig',url:'javascript:alert(1)'}],socials:{instagram:'https://instagram.com/example'},logo:'data:image/png;base64,aGVsbG8='});
+  assert.equal(cleanBusinessProfile(null).description,'');
+  assert.equal(restoreState(JSON.stringify({version:1,name:'Robin',business:{profile:null}})).name,'Robin');
   assert.equal(profile.actions.length,1);
   assert.equal(profile.website,'https://garage.example/afspraak');
   assert.equal(profile.hours.Maandag,'09:00–17:00');
