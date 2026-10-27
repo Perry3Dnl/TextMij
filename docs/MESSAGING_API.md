@@ -1,28 +1,83 @@
-# Authenticated encrypted messaging backend
+# Authenticated messaging, profiles and reports
 
-Status: `src/messaging-api.js` is an authenticated encrypted HTTP API backed by MySQL. The release script provisions an isolated database and activates the API after CI tests, additive migrations and readiness checks. The browser chat remains a separate local preview until its UI is connected. This is not yet independently authenticated E2EE.
+The production Node 24 server uses the isolated MySQL backend. The live browser is connected to it; the original local example is available only through /?preview=1.
 
-## HTTP API
+## Authentication and registration
 
-All requests and responses are JSON over HTTPS.
+All production requests use HTTPS and JSON. API clients authenticate with Authorization: Bearer TOKEN.
 
-- `POST /api/v1/accounts`: `{kind:"personal"|"business",name,publicKey,email?}`. The public key is a base64-encoded **uncompressed P-256 ECDH public key** of 65 bytes. Returns `{accountId,code,token,kind,tier,keyVersion}`. The bearer token is secret and returned once. Client MUST store it in protected device storage, never in a URL, QR, log, analytics event or website localStorage.
-- `GET /api/v1/accounts/:id-or-code`: resolve stable account ID and public key. **Keys are not independently authenticated**. Do not claim secure E2EE until a verified directory, signed keys and anti-substitution checks exist.
-- `POST /api/v1/messages`: authorized bearer account token with `{idempotencyKey: UUID, envelope: encryptedEnvelope}`. Message recipients must exist. Accepts opaque ciphertext only, returns queued ID, and derives Standard/Premium rights from MySQL accounts, never a client flag. Customer replies are Standard. Sender ID is derived from bearer authentication.
-- `GET /api/v1/messages?after=N`: authorized recipient-only paginated inbox (max 100), consisting of dispatched encrypted envelopes and sender account IDs. Clients decrypt locally.
+- POST /api/v1/accounts accepts {kind:"personal"|"business",name,publicKey,email?,browser?}. The public key is a base64 uncompressed P-256 ECDH public key (65 bytes). Business email is optional.
+- API clients receive {accountId,code,token,name,kind,tier,keyVersion}. The token is secret and returned once.
+- With browser:true the token is omitted from JSON and set as an HttpOnly, SameSite=Strict role cookie. HTTPS uses Secure cookies. Browser requests send X-Conappt-Role: personal or business. Origin checks reject foreign-origin cookie-authenticated requests.
+- Browser keys are non-exportable CryptoKeys stored in IndexedDB. Do not put credentials/private keys in QR codes, URLs, logs, analytics or localStorage.
+- GET /api/v1/session returns the current authenticated account and its public profile.
+- GET /api/v1/accounts/:id-or-code resolves stable account ID and public key. This directory does not independently authenticate cryptographic keys or verify legal business identity.
 
-`src/durable-dispatcher.js` selects Premium FIFO before Standard FIFO. MySQL advisory lock + a persistent dispatch clock limit all worker processes to **at most one new dispatched message every 3 seconds**. A dispatch means that a ciphertext row is available for polling, *not* that the recipient phone has received a push notification or read the message.
+## Connections and profiles
 
-The in-memory registration throttle limits each IP to five signups/hour per server process; not production-grade distributed abuse prevention. Production API activation needs a shared ingress limiter, device proof of possession, identity-key verification, monitoring, retention policy, and scalable abuse controls.
+- POST /api/v1/connections accepts {code,alias?} from an authenticated business. The code must identify a personal account. Reconnecting opens the same pair. The optional alias is visible only to that business.
+- GET /api/v1/connections returns the authenticated account's connected customers or businesses, including safe public profiles, keys and selected industry.
+- PUT /api/v1/profile accepts {name,industryId?,profile?,theme?,customTheme?} for the authenticated account. Business profile fields are logo, description, optional phone/HTTPS website/social links, opening hours and up to three external actions. Unknown industries and invalid theme colors are rejected.
 
-## Deployment gate
+The live QR contains only the same-origin public contact link /#connect/CODE. Physical sharing of that code is the invitation to connect; it is not a login or device-transfer token.
 
-`deploy/mysql.compose.yml` defines a MySQL 8.4 container with an internal-only network, persisted volume and file-backed secrets. `deploy/api.messaging.compose.yml` is an optional overlay that places the API on both the shared Caddy network and the internal backend network. MySQL is **never exposed** to the Caddy network or a host TCP port.
+## Encrypted messaging
 
-The database requires schema migrations in order: `deploy/sql/001_encrypted_messages.sql`, `002_idempotency.sql`, `003_accounts_dispatch.sql`, `004_payload_fingerprint.sql`. Existing deployments must be inspected and backed up before migrations; never run against an unknown schema. Credentials are separate host-managed files, not repository secrets. Verify staged backup and restore before turning on `TEXTMIJ_MESSAGING_ENABLED`.
+- POST /api/v1/messages requires {idempotencyKey:UUID,envelope:encryptedEnvelope}. Sender and tier are derived from authentication. Only ciphertext is persisted.
+- GET /api/v1/messages?after=N returns up to 100 dispatched envelopes for the authenticated recipient. The browser decrypts them locally.
 
-The production `deploy/activate.sh` executes `deploy/database.sh` before launching its candidate API, and automatically adds `deploy/api.messaging.compose.yml` once the database checks pass. Secret files are generated locally under `/opt/textmij/secrets`; the app secret is readable only to UID 1000, and the root secret remains private to the deployment user. CI exercises real MySQL integration and the production bootstrap. No production data volume is ever removed in activation or rollback. A restricted SQL snapshot is taken before additional migrations of an existing volume. Off-host encrypted backups, full restore exercises against production-scale data, and a retention policy are not yet automated.
+The durable dispatcher uses a MySQL advisory lock and persistent clock to release at most one message globally every three seconds, Premium FIFO before Standard FIFO. Standard messages may wait during continuous Premium traffic. A dispatch means availability to authenticated polling, not a push notification or proof of reading. Browser polling pauses while hidden. Background push and native mobile packaging remain unfinished.
 
-## Remaining security boundaries
+Recipient key authentication, sender signing, forward secrecy and reviewed device transfer are still required before advertising independently authenticated E2EE. See [E2EE.md](E2EE.md).
 
-The browser's example chat still stores local data and uses no authenticated account backend. New API consumers must implement key authentication and protected private-key storage. The current P-256 ECDH prototype provides confidentiality against a passive server storing ciphertext, **not verified E2EE against an active server substituting public keys**. QR moving, business name ownership and premium payments remain separate features. The backend deliberately does not trust the demo verification flag for any privilege.
+## Private business reports
+
+POST /api/v1/business-reports accepts:
+
+~~~json
+{
+  "businessId": "64-character stable account ID",
+  "requestId": "UUID v4 generated once for this submission",
+  "reason": "impersonation",
+  "details": "Optional explanation"
+}
+~~~
+
+Reasons: impersonation, scam, spam, abuse, misleading, other. Explanation is limited to 2000 Unicode characters; other requires nonblank text.
+
+The server authenticates a personal account and verifies its connection to the target business. It does not trust client-supplied reporter IDs, company names, status or dates. A report stores a server-generated UUID, reporter/target IDs, the business name at submission, reason, explanation, open status and UTC creation time.
+
+The response is 201 {reportId,status:"received"} after transaction commit. An identical retry with the same requestId returns 200 with the original receipt. A conflicting retry returns 409. A persistent rolling-day quota allows ten new reports per account; duplicates do not consume another slot. Account row locking makes the check and insert safe across concurrent API replicas.
+
+Unauthenticated submissions return 401; business-role submissions return 403; unconnected targets return 404; invalid fields return 400; exhausted quota returns 429; storage failures return 503 without a success receipt. GET/listing is not implemented and returns 405. Companies cannot retrieve reports.
+
+Reports are intentionally server-readable moderation data, not encrypted chat. No chat history or private contact fields are automatically attached. The application neither emails reports nor automatically penalizes the reported company.
+
+Authorized database operators can inspect the queue using their existing restricted administrative connection:
+
+~~~sql
+SELECT id, business_id, business_name, reason, details, created_at
+FROM business_reports
+WHERE status = 'open'
+ORDER BY created_at ASC
+LIMIT 100;
+~~~
+
+Do not publish this output or connection credentials. A moderation dashboard and report-retention automation are separate work.
+
+## Deployment and rollback
+
+The tracked additive migrations are:
+
+1. 001_encrypted_messages.sql
+2. 002_idempotency.sql
+3. 003_accounts_dispatch.sql
+4. 004_payload_fingerprint.sql
+5. 005_connections.sql
+6. 006_business_reports.sql
+
+The existing deployment script preserves the dedicated MySQL volume and secrets, validates recorded checksums and takes a restricted SQL snapshot before pending migrations on an existing volume. It validates the new profile, connection and report tables before starting the candidate API.
+
+Rollback must preserve all six schemas and their data. The prior application can ignore the new tables; do not reverse migrations by dropping accounts, connections or reports. Off-host encrypted backups, production-scale restore drills and automated retention are not implemented by this change.
+
+CI exercises disposable real MySQL databases, repeated production bootstrap, ciphertext delivery and report storage/authorization/retries. Browser tests separately exercise signup, a real QR decode with simulated camera frames, camera denial/manual entry, message exchange, a failed report request with retained input, and successful server receipt. No production accounts or messages are used as test fixtures.

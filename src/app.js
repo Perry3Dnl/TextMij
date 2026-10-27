@@ -17,20 +17,23 @@ const assets = new Map([
   ['/app.js', ['app.js', 'text/javascript']],
   ['/model.js', ['model.js', 'text/javascript']],
   ['/crypto.js', ['crypto.js', 'text/javascript']],
-  ['/benchmark.js', ['benchmark.js', 'text/javascript']],
   ['/logo.js', ['logo.js', 'text/javascript']],
+  ['/benchmark.js', ['benchmark.js', 'text/javascript']],
+  ...['bootstrap.js','live-app.js','client.js','device-store.js','contact-code.js','icons.js','business-templates.js','qr.js','report-options.js','vendor/qrcodegen.js','vendor/jsQR.js'].map(file => ['/'+file,[file,'text/javascript']]),
+  ['/live.css', ['live.css','text/css']],
   ['/icon.svg', ['icon.svg', 'image/svg+xml']],
 ].map(([path, [file, type]]) => [path, {
   body: readFileSync(new URL(`../public/${file}`, import.meta.url)),
   contentType: `${type}; charset=utf-8`,
 }]));
 
-// The client is a local preview. Messaging and authentication endpoints follow.
+// The live client uses authenticated device profiles. The original preview remains opt-in.
 export function createApp({ revision = 'development', messaging = null, benchmark = new BenchmarkApi({ revision }) } = {}) {
   return createServer((request, response) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
+    response.setHeader('Permissions-Policy', 'camera=(self), microphone=()');
     response.setHeader('Cache-Control', 'no-store');
-    response.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+    response.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
     let path;
     try { path = new URL(request.url, 'http://localhost').pathname; }
     catch {

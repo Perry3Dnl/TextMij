@@ -29,17 +29,18 @@ try {
   const label = page.locator('#benchmark-status');
   await label.waitFor();
   if (!(await label.textContent()).includes(new Intl.NumberFormat('nl-NL').format(result.completed))) throw new Error('Result missing from app footer');
-  // Check that the temporary footer leaves both navigation and chat composer usable.
+  // Use preserved example conversations for layout checks; never create production test accounts.
+  // Live conversation layout is also covered by the isolated browser-flow tests.
   for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }, { width: 390, height: 844 }]) {
     await page.setViewportSize(viewport);
-    await page.goto(new URL('/#home', origin).href);
+    await page.goto(new URL('/?preview=1#home', origin).href);
     const footer = await label.boundingBox();
     if (!footer || footer.y + footer.height > viewport.height + 1) throw new Error('Footer outside viewport');
     if (viewport.width < 761) {
       const nav = await page.locator('.mobile-navigation').boundingBox();
       if (!nav || nav.y + nav.height > footer.y + 1) throw new Error('Footer overlaps mobile navigation');
     }
-    await page.goto(new URL('/#gesprek/studio-noord', origin).href);
+    await page.goto(new URL('/?preview=1#gesprek/studio-noord', origin).href);
     const composer = await page.locator('.composer-wrap').boundingBox();
     if (!composer || composer.y + composer.height > footer.y + 1) throw new Error('Footer overlaps chat composer');
   }

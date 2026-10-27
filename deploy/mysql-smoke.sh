@@ -51,7 +51,7 @@ networks:
 YAML
 docker network create textmij-ci-messaging-proxy >/dev/null
 "${db[@]}" up -d --wait --wait-timeout 180
-for sql in deploy/sql/00{1,2,3,4}_*.sql; do
+for sql in deploy/sql/00{1,2,3,4,5,6}_*.sql; do
   # shellcheck disable=SC2016 # Expand inside the isolated test MySQL container.
   "${db[@]}" exec -T mysql sh -c 'MYSQL_PWD="$(cat /run/secrets/mysql_root_password)" exec mysql -uroot textmij' < "$sql"
 done
@@ -71,7 +71,7 @@ assert.equal((await fetch(url+'/api/ready')).status,200);
 const post=(path, body, token)=>fetch(url+path,{method:'POST',headers:{'content-type':'application/json',...(token?{authorization:'Bearer '+token}:{})},body:JSON.stringify(body)});
 const keysA=await generateDeviceKeyPair(), keysB=await generateDeviceKeyPair();
 const publicA=await exportDevicePublicKey(keysA.publicKey), publicB=await exportDevicePublicKey(keysB.publicKey);
-const senderResponse=await post('/api/v1/accounts',{kind:'business',name:'Integration Atelier',email:'test@example.invalid',publicKey:publicA});
+const senderResponse=await post('/api/v1/accounts',{kind:'business',name:'Integration Garage',publicKey:publicA});
 const recipientResponse=await post('/api/v1/accounts',{kind:'personal',name:'Integration User',publicKey:publicB});
 assert.equal(senderResponse.status,201);
 assert.equal(recipientResponse.status,201);
@@ -90,5 +90,38 @@ for(let i=0;i<20;i++) {
 assert.ok(item,'Encrypted message was not released by durable dispatcher');
 const plain=await decryptFromSender({senderId:sender.accountId,recipientId:recipient.accountId,privateKey:keysB.privateKey,envelope:item.envelope});
 assert.deepEqual(plain,{title:'Integration',text:'E2EE test message'});
-console.log('MySQL, HTTP authentication, ciphertext persistence and dispatch passed');
+const linked=await post('/api/v1/connections',{code:recipient.code},sender.token);
+assert.equal(linked.status,201);
+assert.equal((await post('/api/v1/connections',{code:recipient.code},sender.token)).status,200);
+const update=await fetch(url+'/api/v1/profile',{method:'PUT',headers:{'content-type':'application/json',authorization:'Bearer '+sender.token},body:JSON.stringify({name:'Integration Garage',industryId:'garage',profile:{description:'Synthetic garage profile'},theme:'white'})});
+assert.equal(update.status,200);
+const connections=await fetch(url+'/api/v1/connections',{headers:{authorization:'Bearer '+recipient.token}});
+const contact=(await connections.json()).contacts[0];
+assert.equal(contact.accountId,sender.accountId);
+assert.equal(contact.industryId,'garage');
+assert.equal(contact.profile.description,'Synthetic garage profile');
+const reportBody={businessId:sender.accountId,requestId:crypto.randomUUID(),reason:'impersonation',details:'Synthetic CI report'};
+assert.equal((await post('/api/v1/business-reports',reportBody)).status,401);
+assert.equal((await post('/api/v1/business-reports',reportBody,sender.token)).status,403);
+const reportResponse=await post('/api/v1/business-reports',reportBody,recipient.token);
+assert.equal(reportResponse.status,201);
+const report=await reportResponse.json();
+assert.equal(report.status,'received');
+const retries=await Promise.all(Array.from({length:3},()=>post('/api/v1/business-reports',reportBody,recipient.token)));
+assert.ok(retries.every(response=>response.status===200));
+for(const response of retries)assert.equal((await response.json()).reportId,report.reportId);
+assert.equal((await post('/api/v1/business-reports',{...reportBody,details:'Conflicting body'},recipient.token)).status,409);
+assert.equal((await post('/api/v1/business-reports',{...reportBody,requestId:crypto.randomUUID(),reason:'other',details:''},recipient.token)).status,400);
+assert.equal((await fetch(url+'/api/v1/business-reports',{headers:{authorization:'Bearer '+sender.token}})).status,405);
+const {createPool}=await import('mysql2/promise');
+const {readFileSync}=await import('node:fs');
+const database=createPool({host:process.env.MYSQL_HOST,user:process.env.MYSQL_USER,database:process.env.MYSQL_DATABASE,password:readFileSync(process.env.MYSQL_PASSWORD_FILE,'utf8').trimEnd()});
+const [[stored]]=await database.execute('SELECT reporter_id,business_id,business_name,reason,details,status FROM business_reports WHERE id = ?',[report.reportId]);
+assert.deepEqual(stored,{reporter_id:recipient.accountId,business_id:sender.accountId,business_name:'Integration Garage',reason:'impersonation',details:'Synthetic CI report',status:'open'});
+for(let i=0;i<9;i++)assert.equal((await post('/api/v1/business-reports',{...reportBody,requestId:crypto.randomUUID()},recipient.token)).status,201);
+assert.equal((await post('/api/v1/business-reports',{...reportBody,requestId:crypto.randomUUID()},recipient.token)).status,429);
+const [[count]]=await database.execute('SELECT COUNT(*) AS total FROM business_reports WHERE reporter_id = ?',[recipient.accountId]);
+assert.equal(count.total,10);
+await database.end();
+console.log('MySQL, authentication, encryption, links, profiles, private reports, retry safety and rate limits passed');
 JS

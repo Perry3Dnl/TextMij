@@ -1,37 +1,20 @@
-import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
+import { randomBytes, createHash } from 'node:crypto';
 import { EncryptedOutbox } from './encrypted-outbox.js';
+import { ContactsApi } from './contacts-api.js';
+import { ReportsApi } from './reports-api.js';
+import { httpError as error, readJson, responseJson } from './http-json.js';
 
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
 const idPattern = /^[a-f0-9]{64}$/;
 const codePattern = /^[0-9]{4}-[A-Z]{3}-[A-Z]{3}$/;
 const b64Pattern = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 const hash = value => createHash('sha256').update(value).digest();
-function error(status, message) { return Object.assign(new Error(message), { status }); }
 function identity(result) { return { id: String(result.id), kind: result.kind, tier: result.tier, code: result.public_code }; }
 function makeCode() {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', bytes = randomBytes(10);
   const digits = Array.from(bytes.subarray(0, 4), x => x % 10).join('');
   const letters = Array.from(bytes.subarray(4), x => alphabet[x % alphabet.length]).join('');
   return digits + '-' + letters.slice(0, 3) + '-' + letters.slice(3);
-}
-
-async function readJson(request) {
-  if (!/^application\/json(?:\s*;.*)?$/i.test(request.headers['content-type'] || '')) throw error(415, 'JSON content type required');
-  const parts = []; let length = 0;
-  for await (const chunk of request) {
-    length += chunk.length;
-    if (length > 16 * 1024) throw error(413, 'Request too large');
-    parts.push(chunk);
-  }
-  try {
-    const body = JSON.parse(Buffer.concat(parts).toString('utf8'));
-    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error();
-    return body;
-  } catch { throw error(400, 'Invalid JSON object'); }
-}
-function responseJson(response, status, body) {
-  response.writeHead(status, {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});
-  response.end(JSON.stringify(body));
 }
 
 export class MessagingApi {
@@ -41,9 +24,16 @@ export class MessagingApi {
     this.outbox = new EncryptedOutbox(pool);
     this.now = now;
     this.registrationCounts = new Map();
+    this.contacts = new ContactsApi(pool, request => this.authenticate(request));
+    this.reports = new ReportsApi(pool, request => this.authenticate(request));
   }
   async authenticate(request) {
-    const token = /^Bearer ([A-Za-z0-9_-]{43})$/.exec(request.headers.authorization || '')?.[1];
+    const role = request.headers['x-conappt-role'];
+    const cookieName = ['personal','business'].includes(role) ? 'conappt_' + role : null;
+    const cookie = cookieName && String(request.headers.cookie || '').split(';').map(part => part.trim()).find(part => part.startsWith(cookieName + '='))?.slice(cookieName.length + 1);
+    const token = /^Bearer ([A-Za-z0-9_-]{43})$/.exec(request.headers.authorization || '')?.[1] || cookie;
+    if (cookie && !request.headers.authorization && request.headers.origin && new URL(request.headers.origin).host !== request.headers.host)
+      throw error(403, 'Cross-origin browser request rejected');
     if (!token) throw error(401, 'Account token required');
     const raw = Buffer.from(token, 'base64url');
     if (raw.length !== 32) throw error(401, 'Invalid account token');
@@ -68,8 +58,8 @@ export class MessagingApi {
     if (!['personal','business'].includes(kind) || typeof name !== 'string' || !name.trim() || name.trim().length > 80)
       throw error(400,'Account type and display name required');
     const email = kind === 'business' ? input.email : null;
-    if (kind === 'business' && (typeof email !== 'string' || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))
-      throw error(400,'Business email required');
+    if (email !== undefined && email !== null && (typeof email !== 'string' || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))
+      throw error(400,'Invalid optional business email');
     const key = input.publicKey;
     if (typeof key !== 'string' || !b64Pattern.test(key) || Buffer.from(key,'base64').length !== 65 || Buffer.from(key,'base64')[0] !== 4)
       throw error(400,'P-256 device public key required');
@@ -81,7 +71,12 @@ export class MessagingApi {
       try {
         await this.pool.execute('INSERT INTO accounts (id,kind,public_code,display_name,email,public_key,credential_hash) VALUES (?,?,?,?,?,?,?)',
           [accountId,kind,code,name.trim(),email?.trim().toLowerCase() ?? null,key,credentialHash]);
-        responseJson(response,201,{ accountId, code, token:tokenRaw.toString('base64url'), kind, tier:'standard', keyVersion:1 });
+        const token = tokenRaw.toString('base64url');
+        if (input.browser === true) {
+          const secure = request.socket.encrypted || request.headers['x-forwarded-proto'] === 'https';
+          response.setHeader('Set-Cookie', 'conappt_' + kind + '=' + token + '; HttpOnly; SameSite=Strict; Path=/api/v1/; Max-Age=31536000' + (secure ? '; Secure' : ''));
+        }
+        responseJson(response,201,{ accountId, code, ...(input.browser === true ? {} : { token }), name:name.trim(), kind, tier:'standard', keyVersion:1 });
         return;
       } catch (e) { if (e?.code !== 'ER_DUP_ENTRY' || i === 4) throw e; }
     }
@@ -128,6 +123,8 @@ export class MessagingApi {
   async handle(request,response,path) {
     try {
       const url = new URL(request.url,'http://localhost');
+      if (await this.reports.handle(request,response,path)) return;
+      if (await this.contacts.handle(request,response,path)) return;
       if (request.method === 'POST' && path === '/api/v1/accounts') return await this.register(request,response);
       if (request.method === 'GET' && path.startsWith('/api/v1/accounts/')) return await this.getPublicKey(request,response,path);
       if (request.method === 'POST' && path === '/api/v1/messages') return await this.send(request,response);

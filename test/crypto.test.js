@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
 import { generateDeviceKeyPair, exportDevicePublicKey, encryptForRecipient, decryptFromSender } from '../public/crypto.js';
 import { validateEncryptedEnvelope } from '../src/encrypted-envelope.js';
 const senderId='a'.repeat(64), recipientId='b'.repeat(64), wrongId='c'.repeat(64);
@@ -23,4 +24,13 @@ test('image ciphertext roundtrips and tampering fails authentication',async()=>{
  assert.deepEqual(out.image,image);
  const corruption={...envelope,ciphertext:envelope.ciphertext.replace(/^./,envelope.ciphertext[0]==='A'?'B':'A')};
  await assert.rejects(()=>decryptFromSender({senderId,recipientId,privateKey:recipient.privateKey,envelope:corruption}));
+});
+test('ordinary chat explicitly supports an empty title while structured encryption remains strict', async () => {
+  const keys=await generateDeviceKeyPair();
+  const senderId=randomBytes(32).toString('hex'),recipientId=randomBytes(32).toString('hex');
+  const input={senderId,recipientId,recipientPublicKey:await exportDevicePublicKey(keys.publicKey),title:'',text:'Gewoon een chatbericht'};
+  await assert.rejects(encryptForRecipient(input),/Title\/text required/);
+  const envelope=await encryptForRecipient({...input,allowEmptyTitle:true});
+  const message=await decryptFromSender({senderId,recipientId,privateKey:keys.privateKey,envelope});
+  assert.deepEqual(message,{title:'',text:'Gewoon een chatbericht'});
 });

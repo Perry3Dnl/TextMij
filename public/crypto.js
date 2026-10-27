@@ -33,11 +33,11 @@ export async function exportDevicePublicKey(publicKey) {
   assertCrypto();
   return b64(await subtle.exportKey('raw', publicKey));
 }
-export async function encryptForRecipient({ senderId, recipientId, recipientPublicKey, title, text, image, keyVersion = 1 }) {
+export async function encryptForRecipient({ senderId, recipientId, recipientPublicKey, title, text, image, keyVersion = 1, allowEmptyTitle = false }) {
   assertCrypto();
   const template = image === undefined ? 'title-text' : 'title-text-image';
   const aad = context({ senderId, recipientId, template, keyVersion });
-  if (typeof title !== 'string' || !title.trim() || typeof text !== 'string' || !text.trim()) throw new TypeError('Title/text required');
+  if (typeof title !== 'string' || (!allowEmptyTitle && !title.trim()) || typeof text !== 'string' || !text.trim()) throw new TypeError('Title/text required');
   const ephemeral = await subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
   const recipientKey = await subtle.importKey('raw', unb64(recipientPublicKey), { name: 'ECDH', namedCurve: 'P-256' }, false, []);
   const nonce = random(12);
