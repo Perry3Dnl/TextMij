@@ -52,7 +52,9 @@ export class MessagingApi {
     return identity(rows[0]);
   }
   checkRegistrationBudget(request) {
-    const ip = request.socket.remoteAddress || 'unknown';
+    // Caddy canonicalizes X-Forwarded-For for untrusted incoming clients.
+    const forwarded = String(request.headers['x-forwarded-for'] || '').split(',')[0].trim();
+    const ip = /^[A-Fa-f0-9:.]{3,45}$/.test(forwarded) ? forwarded : (request.socket.remoteAddress || 'unknown');
     const now = this.now(), record = this.registrationCounts.get(ip);
     if (record && now - record.start < 3600_000 && record.count >= 5) throw error(429, 'Registration rate limited');
     if (!record || now - record.start >= 3600_000) this.registrationCounts.set(ip,{start:now,count:1});
