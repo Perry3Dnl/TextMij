@@ -191,11 +191,14 @@ function renderBusinessHome() {
     <section class="home-recent"><div class="section-heading"><h2>Je laatste klantgesprekken</h2><a class="text-link" href="#gesprekken">Bekijk alles ${icon('arrow')}</a></div><div class="card conversation-list">${recent.map(conversationRow).join('')}</div></section></div>${previewNote()}`;
 }
 
-function businessThemePicker() {
-  return `<section class="card settings-card"><div class="settings-section-heading"><h2>Bedrijfsthema</h2><p>Kies de uitstraling van je zakelijke app en de gesprekken die klanten met jouw bedrijf voeren.</p></div><div class="theme-settings"><div class="theme-options" role="group" aria-label="Kies een bedrijfsthema">${Object.entries(BUSINESS_THEMES).map(([key, value]) => `<button type="button" class="theme-option ${state.business.theme === key ? 'selected' : ''}" data-theme="${key}" aria-pressed="${state.business.theme === key}"><span class="theme-swatch" style="background:${value.accent}"></span><span>${value.label}</span>${state.business.theme === key ? icon('check') : ''}</button>`).join('')}</div><div class="theme-preview" style="${themeStyle(businessThemeFor(state, 'studio-noord'))}"><strong>${html(state.business.name)}</strong><div class="theme-preview-bubble">Zo zien klanten jouw berichten.</div><small>Voorbeeld van jouw chatkleuren</small></div><p class="field-help">De instelling wordt in deze voorbeeldomgeving lokaal opgeslagen. Andere toestellen zien dit pas wanneer bedrijfsprofielen met de server synchroniseren.</p></div></section>`;
-}
 function themeStyle(theme) {
-  return `--chat-accent:${theme.accent};--chat-tint:${theme.tint};--chat-ink:${theme.ink}`;
+  return `--chat-accent:${theme.accent};--chat-tint:${theme.tint};--chat-ink:${theme.ink};--chat-background:${theme.background};--chat-foreground:${theme.foreground}`;
+}
+function businessThemePicker() {
+  const selected = state.business.theme;
+  const colors = state.business.customTheme;
+  const fields = [['accent', 'Accentkleur'], ['tint', 'Berichtachtergrond'], ['ink', 'Berichttekst'], ['background', 'Chatachtergrond'], ['foreground', 'Algemene tekst']];
+  return `<section class="card settings-card"><div class="settings-section-heading"><h2>Bedrijfsthema</h2><p>Kies wit, zwart of ontwerp je eigen kleurenschema voor jouw zakelijke app en klantgesprekken.</p></div><div class="theme-settings"><div class="theme-options" role="group" aria-label="Kies een bedrijfsthema">${Object.entries(BUSINESS_THEMES).map(([key, value]) => `<button type="button" class="theme-option ${selected === key ? 'selected' : ''}" data-theme="${key}" aria-pressed="${selected === key}"><span class="theme-swatch" style="background:${key === 'custom' ? colors.accent : value.accent || '#64748b'}"></span><span>${value.label}</span>${selected === key ? icon('check') : ''}</button>`).join('')}</div>${selected === 'custom' ? `<form id="business-theme-form" class="theme-custom-fields">${fields.map(([key,label]) => `<label class="theme-color-field"><span>${label}</span><input type="color" name="${key}" value="${colors[key]}" aria-label="${label}"></label>`).join('')}<button class="button" type="submit">Bewaar eigen thema</button></form>` : ''}<div class="theme-preview" style="${themeStyle(businessThemeFor(state, 'studio-noord'))}"><strong>${html(state.business.name)}</strong><div class="theme-preview-bubble">Zo zien klanten jouw berichten.</div><small>Voorbeeld van jouw chatkleuren</small></div><p class="field-help">Deze preview bewaart het thema op dit apparaat. Synchronisatie naar andere gebruikers volgt met bedrijfsprofielen op de server.</p></div></section>`;
 }
 function renderBusinessSettings() {
   main.innerHTML = `${pageHeader('Je bedrijf, jouw voorkeuren.', 'Je zakelijke profiel en meldingen op één plek.', 'ZAKELIJKE INSTELLINGEN')}
@@ -260,6 +263,7 @@ function render(focus = false) {
   const theme = businessThemeFor(state, id);
   document.body.style.setProperty('--business-accent', theme.accent);
   document.body.style.setProperty('--business-tint', theme.tint);
+  document.body.style.setProperty('--business-foreground', theme.foreground);
   const validChat = page === 'gesprek' && Boolean(contactFor(id));
   document.body.classList.toggle('is-chat', validChat);
   if (page === 'gesprekken') renderInbox();
@@ -401,7 +405,15 @@ document.addEventListener('input', (event) => {
 });
 
 document.addEventListener('submit', (event) => {
-  if (event.target.id === 'new-customer-form') {
+  if (event.target.id === 'business-theme-form') {
+    event.preventDefault();
+    if (!isBusiness()) return;
+    const data = new FormData(event.target);
+    const colors = Object.fromEntries(['accent','tint','ink','background','foreground'].map(key => [key, data.get(key)]));
+    if (!setBusinessTheme(state, 'custom', colors)) { toast('Ongeldige themakleuren.'); return; }
+    const saved = persist(); render(true);
+    if (saved) toast('Eigen bedrijfsthema opgeslagen.');
+  } else if (event.target.id === 'new-customer-form') {
     event.preventDefault();
     const result = addCustomer(state, document.querySelector('#customer-code').value, document.querySelector('#customer-name').value);
     if (result.error) { const error = document.querySelector('#customer-error'); error.textContent = result.error; error.hidden = false; return; }
