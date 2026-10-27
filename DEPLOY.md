@@ -19,7 +19,7 @@ This matches the password-based SSH deployment currently used by MetElkaarOnline
 
 | Name | Required | Value/default |
 | --- | --- | --- |
-| `TEXTMIJ_DOMAIN` | No | Defaults to `textmij.perry3d.nl`. Override only when changing the hostname; use a hostname without `https://` or a path. |
+| `TEXTMIJ_DOMAIN` | No | Legacy hostname; defaults to `textmij.perry3d.nl`. The same owned Caddy route also serves `conappt.com` automatically. Supply a hostname without `https://` or a path. |
 | `DEPLOY_HOST_KEY_FINGERPRINT` | No | Defaults to the existing shared server's Ed25519 fingerprint, matching MetElkaarOnline. Set this only when deploying to a different server or after a verified host-key change. |
 | `DEPLOY_APP_DIR` | No | `/opt/textmij` |
 | `SHARED_PROXY_NETWORK` | No | `dummy-stock-simulator_default` |
@@ -90,3 +90,7 @@ The existing browser preview is not connected to the server messages yet. The pu
 ## Machine-readable production release result
 
 Starting in version 0.9.1, the deploy job posts `textmij/production` to GitHub commit statuses. `success` is recorded only after the deployment script verifies public HTTPS health returns the exact Git SHA. A failed release records `failure`, allowing automated status verification without exposing SSH secrets or changing the shared Caddy setup. See the workflow run for rollback details.
+
+## Conappt canonical domain
+
+The existing shared Caddy reverse proxy serves both `conappt.com` and the historic `textmij.perry3d.nl` from the same container and deployment revision. HTTPS for both names is handled by the existing Caddy instance; preserve DNS A/AAAA and firewall ports 80/443. The existing legacy domain remains operational to preserve user access and integrations. Neither host is redirected in this release, to avoid breaking API callers. The deploy continues to edit only the managed TextMij marker block and validates the whole shared Caddy configuration before reloading. CI tests both hostnames through the reverse proxy on its isolated network. For production verification, check `https://conappt.com/api/health` and `https://textmij.perry3d.nl/api/health` return the same deployed revision.
