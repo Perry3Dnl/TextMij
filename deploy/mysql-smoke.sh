@@ -48,9 +48,9 @@ export TEXTMIJ_CONTAINER=textmij-api-ci-messaging
 "${api[@]}" up -d --no-build --wait --wait-timeout 120
 # MySQL must not share the proxy network or publish any TCP port.
 mysql_id="$("${db[@]}" ps -q mysql)"
-docker inspect "$mysql_id" --format '{{json .NetworkSettings.Ports}}' | grep -Fx '{}'
+docker inspect "$mysql_id" --format '{{json .NetworkSettings.Ports}}' | python3 -c 'import json,sys; ports=json.load(sys.stdin); assert all(value is None for value in ports.values())'
 docker inspect "$mysql_id" --format '{{json .NetworkSettings.Networks}}' | python3 -c 'import json,sys; n=json.load(sys.stdin); assert set(n)=={"textmij-ci-messaging-backend"}'
-docker exec "$TEXTMIJ_CONTAINER" node --input-type=module <<'JS'
+docker exec -i "$TEXTMIJ_CONTAINER" node --input-type=module <<'JS'
 import assert from 'node:assert/strict';
 import { generateDeviceKeyPair, exportDevicePublicKey, encryptForRecipient, decryptFromSender } from './public/crypto.js';
 const url='http://127.0.0.1:3000';
