@@ -49,6 +49,7 @@ class DeploymentTests(unittest.TestCase):
         release = app / "releases" / f"{REVISION}-40340723565-1"
         release.mkdir(parents=True)
         shutil.copytree(ROOT / "deploy", release / "deploy")
+        (release / ".benchmark-token").write_text("isolated-test-token")
         # Isolate database bootstrap here; Docker CI separately tests real MySQL.
         database = release / "deploy/database.sh"
         database.write_text("#!/usr/bin/env bash\nset -euo pipefail\nprintf 'prepared\\n' > \"$FAKE_LOG.database\"\n")

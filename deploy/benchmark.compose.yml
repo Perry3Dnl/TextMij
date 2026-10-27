@@ -1,0 +1,17 @@
+services:
+  api:
+    environment:
+      BENCHMARK_TOKEN_FILE: /run/secrets/benchmark_token
+      BENCHMARK_RESULT_FILE: /app/benchmark-data/result.json
+    secrets:
+      - benchmark_token
+    volumes:
+      - benchmark_results:/app/benchmark-data
+
+secrets:
+  benchmark_token:
+    file: ${TEXTMIJ_BENCHMARK_TOKEN_FILE:?Deployment benchmark credential file required}
+
+volumes:
+  benchmark_results:
+    name: textmij_benchmark_results

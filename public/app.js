@@ -1,3 +1,4 @@
+import { startBenchmarkLabel } from './benchmark.js';
 import { optimizeCompanyLogo } from './logo.js';
 import {
   STORAGE_KEY, DEMO_CODE, MESSAGE_LIMITS, freshState, restoreState, contactsFor,
@@ -589,3 +590,4 @@ dialog.addEventListener('click', (event) => {
 window.addEventListener('hashchange', () => render(true));
 if (!location.hash) history.replaceState(null, '', '#home');
 render();
+startBenchmarkLabel(document.querySelector('#benchmark-status'));

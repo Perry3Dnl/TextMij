@@ -1,5 +1,6 @@
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
+import { BenchmarkApi } from './benchmark.js';
 
 const appVersion = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 function releaseHtml(html, revision) {
@@ -16,6 +17,7 @@ const assets = new Map([
   ['/app.js', ['app.js', 'text/javascript']],
   ['/model.js', ['model.js', 'text/javascript']],
   ['/crypto.js', ['crypto.js', 'text/javascript']],
+  ['/benchmark.js', ['benchmark.js', 'text/javascript']],
   ['/logo.js', ['logo.js', 'text/javascript']],
   ['/icon.svg', ['icon.svg', 'image/svg+xml']],
 ].map(([path, [file, type]]) => [path, {
@@ -24,7 +26,7 @@ const assets = new Map([
 }]));
 
 // The client is a local preview. Messaging and authentication endpoints follow.
-export function createApp({ revision = 'development', messaging = null } = {}) {
+export function createApp({ revision = 'development', messaging = null, benchmark = new BenchmarkApi({ revision }) } = {}) {
   return createServer((request, response) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Cache-Control', 'no-store');
@@ -34,6 +36,13 @@ export function createApp({ revision = 'development', messaging = null } = {}) {
     catch {
       response.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
       response.end(JSON.stringify({ error: 'Invalid request URL' }));
+      return;
+    }
+    if (path === '/api/benchmark' || path.startsWith('/api/benchmark/')) {
+      void benchmark.handle(request, response, path).catch(() => {
+        if (!response.headersSent) response.writeHead(500);
+        response.end();
+      });
       return;
     }
     if (path === '/api/ready') {
