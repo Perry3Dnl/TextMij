@@ -144,7 +144,7 @@ test('customer codes create one business conversation and existing codes reopen 
 test('business profile, role, customers and role-specific preferences survive reloads', () => {
   const state = freshState();
   state.mode = 'business';
-  state.business = { name: 'Klein Atelier', email: 'hallo@atelier.example', demoVerification: 'inactive', theme: 'sage' };
+  state.business = { name: 'Klein Atelier', email: 'hallo@atelier.example', demoVerification: 'inactive', theme: 'white', customTheme: { accent: '#245c91', tint: '#e5f1fc', ink: '#173e65', background: '#ffffff', foreground: '#263326' } };
   const { id } = addCustomer(state, '9876-ABC-DEF', 'Alex');
   state.mutedBusiness.push(id);
   markRead(state, 'customer-sam');
@@ -198,16 +198,18 @@ test('malformed business storage drops bad customers and over-limit business mes
   assert.equal(restored.replies['customer-sam'][0].title, 'Title');
 });
 
-test('business theme persists and is scoped to the linked customer conversation', async () => {
+
+test('white, dark and custom themes persist across reloads without affecting other companies', async () => {
   const { BUSINESS_THEMES, setBusinessTheme, businessThemeFor } = await import('../public/model.js');
   const state = freshState();
-  assert.equal(setBusinessTheme(state, 'ocean'), true);
-  assert.equal(setBusinessTheme(state, '<style>'), false);
-  assert.equal(state.business.theme, 'ocean');
-  assert.equal(businessThemeFor(state, 'customer-sam', 'business'), BUSINESS_THEMES.ocean);
-  assert.equal(businessThemeFor(state, 'studio-noord', 'personal'), BUSINESS_THEMES.ocean);
-  assert.equal(businessThemeFor(state, 'fietsatelier', 'personal'), BUSINESS_THEMES.sage);
-  assert.equal(restoreState(JSON.stringify(state)).business.theme, 'ocean');
-  assert.equal(restoreState(JSON.stringify({version:1,business:{theme:'invalid'}})).business.theme, 'sage');
-  assert.equal(restoreState(JSON.stringify({version:1,business:{theme:'<img>'}})).business.theme, 'sage');
+  assert.equal(state.business.theme, 'white');
+  assert.equal(setBusinessTheme(state,'black'),true);
+  assert.equal(businessThemeFor(state,'customer-sam','business').background, '#161c19');
+  const colors = { accent:'#aabbcc',tint:'#112233',ink:'#fefefe',background:'#101010',foreground:'#ffffff' };
+  assert.equal(setBusinessTheme(state,'custom',colors),true);
+  assert.equal(restoreState(JSON.stringify(state)).business.customTheme.accent,'#aabbcc');
+  assert.deepEqual(businessThemeFor(state,'studio-noord','personal'),colors);
+  assert.deepEqual(businessThemeFor(state,'fietsatelier','personal'),BUSINESS_THEMES.white);
+  assert.equal(setBusinessTheme(state,'custom',{...colors,accent:'red;inject'}),false);
+  assert.equal(restoreState(JSON.stringify({version:1,business:{theme:'unknown'}})).business.theme,'white');
 });
