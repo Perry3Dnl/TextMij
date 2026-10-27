@@ -73,6 +73,9 @@ function route() {
 }
 
 function avatar(business, extra = '') {
+  if (!isBusiness() && business.id === 'studio-noord' && state.business.profile.logo) {
+    return `<img class="avatar company-avatar ${extra}" src="${state.business.profile.logo}" alt="" aria-hidden="true">`;
+  }
   return `<span class="avatar ${business.color} ${extra}" aria-hidden="true">${html(business.initials)}</span>`;
 }
 
