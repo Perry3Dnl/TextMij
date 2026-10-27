@@ -631,3 +631,68 @@ body.customer-company-chat-theme .chat-panel .chat-business-detail { color: var(
   .mobile-navigation { bottom: calc(52px + env(safe-area-inset-bottom)); padding-bottom: 10px; }
   .is-chat main { height: calc(100dvh - 52px - env(safe-area-inset-bottom)); }
 }
+
+/* Black theme: neutral charcoal surfaces, legible modal/account choices. */
+body.business-dark-theme {
+  --canvas: #101512;
+  --white: #1b241e;
+  --ink: #f3f7f4;
+  --muted: #b9c8be;
+  --line: #3a463e;
+  --business-card: #1b241e;
+  --business-control: #222d26;
+  --business-hover: #2a372e;
+  --business-button-text: #101512;
+  background: var(--canvas);
+  color: var(--ink);
+}
+body.business-dark-theme .sidebar,
+body.business-dark-theme .mobile-header,
+body.business-dark-theme .mobile-navigation,
+body.business-dark-theme .card,
+body.business-dark-theme .conversation-row,
+body.business-dark-theme .settings-card {
+  background: var(--business-card);
+  color: var(--ink);
+  border-color: var(--line);
+}
+body.business-dark-theme .app-dialog {
+  background: #202a24;
+  color: #f3f7f4;
+  border: 1px solid #405047;
+  box-shadow: 0 22px 75px rgba(0,0,0,.55);
+  color-scheme: dark;
+}
+body.business-dark-theme .app-dialog::backdrop {
+  background: rgba(4,8,6,.64);
+  backdrop-filter: blur(2px);
+}
+body.business-dark-theme .app-dialog h2,
+body.business-dark-theme .account-choice strong { color: #f3f7f4; }
+body.business-dark-theme .app-dialog p,
+body.business-dark-theme .account-choice small { color: #b9c8be; }
+body.business-dark-theme .app-dialog .account-choice {
+  background: #28332c;
+  color: #f3f7f4;
+  border: 1px solid #47564c;
+}
+body.business-dark-theme .app-dialog .account-choice:hover {
+  background: #344339;
+  border-color: #94cb89;
+}
+body.business-dark-theme .app-dialog .account-choice.selected {
+  background: #294132;
+  color: #f3f7f4;
+  border-color: #93ce87;
+}
+body.business-dark-theme .app-dialog .account-choice-icon {
+  background: #34453a;
+  color: #a3d995;
+}
+body.business-dark-theme .app-dialog .account-choice > svg { color: #a3d995; }
+body.business-dark-theme .app-dialog .button.secondary {
+  background: #253129;
+  border-color: #4b5b50;
+  color: #f3f7f4;
+}
+body.business-dark-theme .app-dialog .button.secondary:hover { background: #35443a; }
