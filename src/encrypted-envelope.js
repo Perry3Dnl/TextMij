@@ -16,7 +16,7 @@ export function validateEncryptedEnvelope(body, tier = 'standard') {
   const keys = new Set(['version','recipientId','template','ciphertext','nonce','wrappedKey','keyVersion','imageCiphertext','imageNonce']);
   if (Object.keys(body).some(key => !keys.has(key))) throw new TypeError('Unexpected envelope field');
   if (body.version !== ENVELOPE_VERSION || !Number.isSafeInteger(body.keyVersion) || body.keyVersion < 1) throw new TypeError('Unsupported envelope version');
-  if (typeof body.recipientId !== 'string' || !/^[0-9]{4}-[A-Z]{3}-[A-Z]{3}$/.test(body.recipientId)) throw new TypeError('Invalid recipient');
+  if (typeof body.recipientId !== 'string' || !(/^[0-9]{4}-[A-Z]{3}-[A-Z]{3}$/.test(body.recipientId) || /^[a-f0-9]{64}$/.test(body.recipientId))) throw new TypeError('Invalid recipient');
   if (!['title-text','title-text-image'].includes(body.template)) throw new TypeError('Unsupported template');
   if (tier === 'standard' && body.template !== 'title-text') throw new TypeError('Premium template required');
   const cipher = decode(body.ciphertext, 'ciphertext'), nonce = decode(body.nonce, 'nonce'), wrapped = decode(body.wrappedKey, 'wrappedKey');
