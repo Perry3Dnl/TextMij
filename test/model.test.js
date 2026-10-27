@@ -213,3 +213,18 @@ test('white, dark and custom themes persist across reloads without affecting oth
   assert.equal(setBusinessTheme(state,'custom',{...colors,accent:'red;inject'}),false);
   assert.equal(restoreState(JSON.stringify({version:1,business:{theme:'unknown'}})).business.theme,'white');
 });
+
+test('custom mode can be opened before colors are submitted and retains saved colors', async () => {
+  const { setBusinessTheme, businessThemeFor } = await import('../public/model.js');
+  const state = freshState();
+  assert.equal(setBusinessTheme(state, 'custom'), true);
+  assert.equal(state.business.theme, 'custom');
+  const saved = { accent:'#112233',tint:'#eaeaea',ink:'#111111',background:'#202020',foreground:'#ffffff' };
+  assert.equal(setBusinessTheme(state,'custom',saved),true);
+  assert.deepEqual(businessThemeFor(state,'studio-noord','personal'), saved);
+  assert.equal(setBusinessTheme(state,'black'),true);
+  assert.equal(setBusinessTheme(state,'custom'),true);
+  assert.deepEqual(businessThemeFor(state,'studio-noord','personal'), saved);
+  assert.deepEqual(restoreState(JSON.stringify(state)).business.customTheme, saved);
+  assert.equal(setBusinessTheme(state,'custom',{...saved,accent:'red'}),false);
+});
