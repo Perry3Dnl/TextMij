@@ -26,7 +26,7 @@ sys.path.insert(0, 'deploy')
 import caddy
 print(caddy.render('textmij.example.com', sys.argv[1]).replace('textmij.example.com, conappt.com {', 'http://textmij.example.com, http://conappt.com {'))
 PY
-docker run -d --name textmij-ci-caddy --network textmij-ci --network-alias textmij.example.com \
+docker run -d --name textmij-ci-caddy --network textmij-ci --network-alias textmij.example.com --network-alias conappt.com \
   -v "$RUNNER_TEMP/TextMij.proxy.Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine
 docker exec "$TEXTMIJ_CONTAINER" node --input-type=module -e '
   for (let attempt = 0; attempt < 20; attempt++) {
