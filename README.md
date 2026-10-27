@@ -53,3 +53,24 @@ See [DEPLOY.md](DEPLOY.md) for GitHub secrets, variables, shared-server prerequi
 ## Business verification preview
 
 The business Settings screen offers a simulated verification plan priced at **€20/month**. Confirming the mock checkout enables a blue **Demo-verificatie** outline beside the business name in the business dashboard and the example customer inbox/chat. Users can disable it at any time. The selection is stored locally with other preview preferences and survives business profile edits and page reloads. **No money is collected, no subscription is created, and no identity is checked.** The badge must not be described as genuine verification until a secured backend implements payment events, entitlement management, business identity review, and a server-authoritative public badge. Core business messaging stays free.
+
+## Server-side message policy (prepared, not yet connected to delivery)
+
+`src/message-queue.js` implements the internal scheduler and validator, independently of the local browser preview. Standard companies can use the `title-text` template with **1024 UTF-8 bytes shared by title and text**. Premium companies can use **2048 UTF-8 text bytes** and optionally the `title-text-image` template with an additional **1024 binary image bytes** (PNG, JPEG, WebP). This is message *content* size, not the HTTP/JSON envelope size or base64 wire encoding overhead.
+
+Messages enter a bounded 1000-item in-memory queue. The server starts **at most one dispatch per 3000 ms**, with *FIFO within each priority tier* and Premium always taking precedence over pending Standard messages. Premium therefore may starve Standard if Premium traffic remains continuous; no end-to-end latency SLA can be promised. Delivery failures are reported to an injected `onError` callback, not retried automatically. Stopping or restarting the process loses pending messages; use durable storage, idempotency, retry/backoff, and an outbox before production messaging is enabled.
+
+Usage for the later authenticated backend:
+
+```js
+import { MessageQueue } from './src/message-queue.js';
+const queue = new MessageQueue({
+  resolveTier: senderId => serverOwnedEntitlements.get(senderId) === 'premium' ? 'premium' : 'standard',
+  dispatch: async job => { /* store and deliver to authenticated recipient */ },
+  onError: (error, job) => { /* redact and record safe failure details */ },
+});
+queue.start();
+queue.enqueue(authenticatedBusinessId, { recipientId: '7483-RGY-RCH', title: 'Update', text: 'Hallo' });
+```
+
+There is deliberately **no publicly writable message endpoint** yet: identity, recipient sessions, persistence, and payment-webhook-derived entitlements do not exist. A local browser `demoVerification` flag never gives a sender Premium server privileges. A verified blue company mark and name reservation are separate, future server-controlled features. This module is not a per-sender requests-per-second throttle; it enforces content sizes and **global dispatch cadence**. Implement per-identity ingress rate limits and HTTP request-body caps when introducing the authenticated API.
