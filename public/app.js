@@ -192,7 +192,7 @@ function renderBusinessHome() {
 }
 
 function themeStyle(theme) {
-  return `--chat-accent:${theme.accent};--chat-tint:${theme.tint};--chat-ink:${theme.ink};--chat-background:${theme.background};--chat-foreground:${theme.foreground}`;
+  return `--chat-accent:${theme.accent};--chat-tint:${theme.tint};--chat-ink:${theme.ink};--chat-background:${theme.background};--chat-foreground:${theme.foreground};background-color:${theme.background};color:${theme.foreground};`;
 }
 function businessThemePicker() {
   const selected = state.business.theme;
