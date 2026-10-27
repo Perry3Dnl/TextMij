@@ -50,6 +50,7 @@
 .report-privacy svg { width:17px;height:17px;flex-shrink:0;margin-top:3px; }
 .report-success>svg { background:var(--green-light);color:var(--green);width:46px;height:46px;padding:12px;border-radius:50%;margin-bottom:12px; }
 .report-success .field-help { overflow-wrap:anywhere; }
+#report-form > .dialog-actions { position:sticky;bottom:0;z-index:1;background:var(--white);padding:15px 0 3px;box-shadow:0 -10px 16px var(--white); }
 #app-dialog .text-input { margin:7px 0 10px; }
 #app-dialog .dialog-actions { flex-wrap:wrap; }
 .settings-card>form .button { margin-top:16px; }

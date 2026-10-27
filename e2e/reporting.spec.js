@@ -48,6 +48,7 @@ test('two devices connect by a real QR scan, exchange messages, and report priva
   await customer.getByRole('button',{name:'Bedrijf melden',exact:true}).click();
   await customer.getByLabel('Doet zich voor als een ander bedrijf',{exact:true}).check();
   await customer.getByLabel('Toelichting',{exact:false}).fill('Dit is een privacyveilige testmelding.');
+  await expect(customer.getByRole('button',{name:'Melding versturen',exact:true})).toBeInViewport({ratio:1});
   await customer.screenshot({path:testInfo.outputPath('report-mobile.png'),fullPage:true});
   await customer.route('**/api/v1/business-reports',route=>route.abort());
   await customer.getByRole('button',{name:'Melding versturen',exact:true}).click();
