@@ -308,6 +308,7 @@ function render(focus = false) {
   document.body.style.setProperty('--business-ink', theme.ink);
   document.body.style.setProperty('--business-mode', state.business.theme);
   document.body.style.colorScheme = (isBusiness() || chatCompanyTheme) && state.business.theme === 'black' ? 'dark' : 'light';
+  document.body.classList.toggle('business-dark-theme', (isBusiness() || chatCompanyTheme) && state.business.theme === 'black');
   document.body.classList.toggle('is-chat', validChat);
   if (page === 'gesprekken') renderInbox();
   else if (page === 'instellingen') renderSettings();
