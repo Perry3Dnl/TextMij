@@ -16,7 +16,7 @@ cleanup() {
 trap cleanup EXIT
 docker network create textmij-ci
 docker compose -p textmij-ci -f deploy/compose.yml up -d --no-build --wait --wait-timeout 120
-docker exec "$TEXTMIJ_CONTAINER" node -e "Promise.all([fetch('http://127.0.0.1:3000/'),fetch('http://127.0.0.1:3000/api/health')]).then(async ([web,health])=>{const b=await health.json();if(!web.ok||!health.ok||b.revision!==process.env.APP_REVISION||!(await web.text()).includes('TextMij'))process.exit(1)}).catch(()=>process.exit(1))"
+docker exec "$TEXTMIJ_CONTAINER" node -e "Promise.all([fetch('http://127.0.0.1:3000/'),fetch('http://127.0.0.1:3000/api/health')]).then(async ([web,health])=>{const b=await health.json();if(!web.ok||!health.ok||b.revision!==process.env.APP_REVISION||!(await web.text()).includes('Conappt'))process.exit(1)}).catch(()=>process.exit(1))"
 
 # Only the CI listener uses plain HTTP to avoid external ACME/DNS dependencies.
 # Headers and the reverse-proxy upstream are rendered from the production file.
