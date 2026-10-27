@@ -228,3 +228,16 @@ test('custom mode can be opened before colors are submitted and retains saved co
   assert.deepEqual(restoreState(JSON.stringify(state)).business.customTheme, saved);
   assert.equal(setBusinessTheme(state,'custom',{...saved,accent:'red'}),false);
 });
+
+test('full business UI themes expose valid contrasting backgrounds and preserve personal isolation', async () => {
+  const { BUSINESS_THEMES, businessThemeFor, setBusinessTheme } = await import('../public/model.js');
+  const state = freshState();
+  for (const theme of ['white','black']) {
+    assert.equal(setBusinessTheme(state,theme),true);
+    const palette=businessThemeFor(state,'customer-sam','business');
+    assert.match(palette.background,/^#[a-f0-9]{6}$/i);
+    assert.match(palette.foreground,/^#[a-f0-9]{6}$/i);
+    assert.notEqual(palette.background,palette.foreground);
+    assert.deepEqual(businessThemeFor(state,'fietsatelier','personal'), BUSINESS_THEMES.white);
+  }
+});

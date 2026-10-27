@@ -387,3 +387,139 @@ h1 { overflow-wrap: anywhere; }
 .theme-preview small { color: var(--chat-foreground); opacity: .8; }
 .theme-preview-bubble { background: var(--chat-tint); color: var(--chat-ink); }
 .chat-panel .chat-demo-strip, .chat-panel .chat-business-detail, .chat-panel .composer-help { color: var(--chat-foreground); opacity: .8; }
+
+
+/* All business surfaces share one palette. Customer pages are untouched. */
+body.business-theme-active {
+  --white: color-mix(in srgb, var(--business-background) 92%, var(--business-foreground) 8%);
+  --canvas: var(--business-background);
+  --ink: var(--business-foreground);
+  --muted: color-mix(in srgb, var(--business-foreground) 78%, var(--business-background) 22%);
+  --green: var(--business-accent);
+  --green-light: var(--business-tint);
+  --line: color-mix(in srgb, var(--business-foreground) 20%, var(--business-background) 80%);
+  --business-card: var(--white);
+  --business-control: color-mix(in srgb, var(--business-background) 94%, var(--business-foreground) 6%);
+  --business-hover: color-mix(in srgb, var(--business-background) 83%, var(--business-foreground) 17%);
+  --business-button-text: var(--business-background);
+  background: var(--canvas);
+  color: var(--ink);
+}
+.business-theme-active .sidebar,
+.business-theme-active .mobile-header,
+.business-theme-active .mobile-navigation,
+.business-theme-active .card,
+.business-theme-active .app-dialog,
+.business-theme-active .conversation-row,
+.business-theme-active .inbox-list,
+.business-theme-active .composer,
+.business-theme-active .settings-card,
+.business-theme-active .theme-preview {
+  background-color: var(--business-card);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.business-theme-active .sidebar-label,
+.business-theme-active .free-note,
+.business-theme-active .page-subtitle,
+.business-theme-active .eyebrow,
+.business-theme-active .field-help,
+.business-theme-active .settings-section-heading p,
+.business-theme-active .settings-info p,
+.business-theme-active .card-label,
+.business-theme-active .device-note,
+.business-theme-active .conversation-preview,
+.business-theme-active .conversation-time,
+.business-theme-active .toggle-description,
+.business-theme-active .preview-note,
+.business-theme-active .theme-preview small,
+.business-theme-active .dialog-note {
+  color: var(--muted);
+}
+.business-theme-active .nav-link,
+.business-theme-active .profile-link,
+.business-theme-active .mode-switch,
+.business-theme-active .brand,
+.business-theme-active .text-link,
+.business-theme-active .plain-button,
+.business-theme-active .settings-info,
+.business-theme-active .conversation-name {
+  color: var(--ink);
+}
+.business-theme-active .nav-link:hover,
+.business-theme-active .conversation-row:hover,
+.business-theme-active .account-choice:hover {
+  background: var(--business-hover);
+}
+.business-theme-active .nav-link.active {
+  background: var(--business-tint);
+  color: var(--business-ink);
+}
+.business-theme-active .icon-button,
+.business-theme-active .text-input,
+.business-theme-active .search-field,
+.business-theme-active input,
+.business-theme-active textarea,
+.business-theme-active .theme-option,
+.business-theme-active .filter-button,
+.business-theme-active .button.secondary {
+  background: var(--business-control);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.business-theme-active input::placeholder,
+.business-theme-active textarea::placeholder { color: var(--muted); }
+.business-theme-active .button:not(.secondary):not(.danger),
+.business-theme-active .nav-badge,
+.business-theme-active .send-button {
+  background: var(--business-accent);
+  color: var(--business-button-text);
+}
+.business-theme-active .button.secondary:hover,
+.business-theme-active .icon-button:hover,
+.business-theme-active .theme-option:hover {
+  background: var(--business-hover);
+  color: var(--ink);
+}
+.business-theme-active .how-card,
+.business-theme-active .business-mark,
+.business-theme-active .account-choice.selected {
+  background: var(--business-tint);
+  color: var(--business-ink);
+  border-color: var(--line);
+}
+.business-theme-active .preview-pill,
+.business-theme-active .sample-label,
+.business-theme-active .chat-demo-strip {
+  background: var(--business-control);
+  color: var(--muted);
+  border-color: var(--line);
+}
+.business-theme-active .theme-option.selected {
+  background: var(--business-tint) !important;
+  color: var(--business-ink) !important;
+  border-color: var(--business-accent) !important;
+}
+.business-theme-active .theme-option.selected svg { color: var(--business-ink); }
+.business-theme-active .theme-preview {
+  background: var(--chat-background) !important;
+  color: var(--chat-foreground) !important;
+}
+.business-theme-active .theme-preview strong { color: var(--chat-foreground) !important; }
+.business-theme-active .theme-preview-bubble {
+  background: var(--chat-tint);
+  color: var(--chat-ink);
+}
+.business-theme-active .theme-custom-fields,
+.business-theme-active .theme-color-field { color: var(--ink); }
+.business-theme-active .chat-panel {
+  background: var(--chat-background) !important;
+  color: var(--chat-foreground);
+}
+.business-theme-active .chat-header,
+.business-theme-active .composer-wrap,
+.business-theme-active .thread { background: var(--chat-background); }
+@media (max-width: 760px) {
+  .business-theme-active .mobile-navigation { background: var(--business-card); }
+  .business-theme-active .mobile-navigation .nav-link.active { color: var(--business-ink); background: var(--business-tint); }
+}

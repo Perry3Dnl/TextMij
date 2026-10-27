@@ -264,6 +264,10 @@ function render(focus = false) {
   document.body.style.setProperty('--business-accent', theme.accent);
   document.body.style.setProperty('--business-tint', theme.tint);
   document.body.style.setProperty('--business-foreground', theme.foreground);
+  document.body.style.setProperty('--business-background', theme.background);
+  document.body.style.setProperty('--business-ink', theme.ink);
+  document.body.style.setProperty('--business-mode', state.business.theme);
+  document.body.style.colorScheme = isBusiness() && state.business.theme === 'black' ? 'dark' : 'light';
   const validChat = page === 'gesprek' && Boolean(contactFor(id));
   document.body.classList.toggle('is-chat', validChat);
   if (page === 'gesprekken') renderInbox();
