@@ -541,3 +541,15 @@ body.business-theme-active {
 .company-action-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .company-hour-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 @media(max-width:760px){.company-profile-grid,.company-action-fields,.company-hour-fields{grid-template-columns:1fr}.company-profile-hero{padding:19px;align-items:flex-start;}.company-logo,.company-logo-fallback{width:60px;height:60px;}}
+
+/* In the customer's linked company conversation, brand the whole chat workspace,
+   but restore the normal personal UI outside that conversation. */
+body.customer-company-chat-theme .chat-panel,
+body.customer-company-chat-theme .chat-header,
+body.customer-company-chat-theme .thread,
+body.customer-company-chat-theme .composer-wrap { background: var(--chat-background); color: var(--chat-foreground); }
+body.customer-company-chat-theme .message.incoming .message-body { background: var(--business-control); color: var(--business-foreground); border-color: var(--line); }
+body.customer-company-chat-theme .message.outgoing .message-body { background: var(--business-tint); color: var(--business-ink); border-color: var(--line); }
+body.customer-company-chat-theme .chat-demo-strip { background: var(--business-control); color: var(--business-foreground); border-color: var(--line); }
+body.customer-company-chat-theme .chat-panel .chat-business-name,
+body.customer-company-chat-theme .chat-panel .chat-business-detail { color: var(--chat-foreground); }
