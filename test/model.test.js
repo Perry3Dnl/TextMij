@@ -144,7 +144,7 @@ test('customer codes create one business conversation and existing codes reopen 
 test('business profile, role, customers and role-specific preferences survive reloads', () => {
   const state = freshState();
   state.mode = 'business';
-  state.business = { name: 'Klein Atelier', email: 'hallo@atelier.example', demoVerification: 'inactive' };
+  state.business = { name: 'Klein Atelier', email: 'hallo@atelier.example', demoVerification: 'inactive', theme: 'sage' };
   const { id } = addCustomer(state, '9876-ABC-DEF', 'Alex');
   state.mutedBusiness.push(id);
   markRead(state, 'customer-sam');
@@ -196,4 +196,18 @@ test('malformed business storage drops bad customers and over-limit business mes
   assert.equal(restored.customers[0].addedAt, now);
   assert.equal(restored.replies['customer-sam'].length, 1);
   assert.equal(restored.replies['customer-sam'][0].title, 'Title');
+});
+
+test('business theme persists and is scoped to the linked customer conversation', async () => {
+  const { BUSINESS_THEMES, setBusinessTheme, businessThemeFor } = await import('../public/model.js');
+  const state = freshState();
+  assert.equal(setBusinessTheme(state, 'ocean'), true);
+  assert.equal(setBusinessTheme(state, '<style>'), false);
+  assert.equal(state.business.theme, 'ocean');
+  assert.equal(businessThemeFor(state, 'customer-sam', 'business'), BUSINESS_THEMES.ocean);
+  assert.equal(businessThemeFor(state, 'studio-noord', 'personal'), BUSINESS_THEMES.ocean);
+  assert.equal(businessThemeFor(state, 'fietsatelier', 'personal'), BUSINESS_THEMES.sage);
+  assert.equal(restoreState(JSON.stringify(state)).business.theme, 'ocean');
+  assert.equal(restoreState(JSON.stringify({version:1,business:{theme:'invalid'}})).business.theme, 'sage');
+  assert.equal(restoreState(JSON.stringify({version:1,business:{theme:'<img>'}})).business.theme, 'sage');
 });
