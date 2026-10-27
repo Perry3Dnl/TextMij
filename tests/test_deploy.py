@@ -49,6 +49,10 @@ class DeploymentTests(unittest.TestCase):
         release = app / "releases" / f"{REVISION}-40340723565-1"
         release.mkdir(parents=True)
         shutil.copytree(ROOT / "deploy", release / "deploy")
+        # Isolate database bootstrap here; Docker CI separately tests real MySQL.
+        database = release / "deploy/database.sh"
+        database.write_text("#!/usr/bin/env bash\nset -euo pipefail\nprintf 'prepared\\n' > \"$FAKE_LOG.database\"\n")
+        database.chmod(0o755)
         caddyfile = base / "Caddyfile"
         old_block = f"{START}\ntextmij.example.com {{\n\treverse_proxy {OLD}:3000\n}}\n{END}\n"
         original = OTHER if first else OTHER + old_block
