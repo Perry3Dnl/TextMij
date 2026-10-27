@@ -20,6 +20,13 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    # MySQL's first-run entrypoint must chown its persistent data directory and drop UID.
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --silent"]
       interval: 15s
