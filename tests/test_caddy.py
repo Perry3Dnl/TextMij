@@ -16,6 +16,12 @@ class CaddyTests(unittest.TestCase):
         result = caddy.replace(OTHER, caddy.render("textmij.example.com", "textmij-api-abc"))
         self.assertTrue(result.startswith(OTHER))
         self.assertIn("reverse_proxy textmij-api-abc:3000", result)
+        self.assertIn("textmij.example.com, conappt.com {", result)
+
+    def test_conappt_and_legacy_domain_both_route_to_same_container(self):
+        route = caddy.render("textmij.perry3d.nl", "textmij-api-abc")
+        self.assertIn("textmij.perry3d.nl, conappt.com {", route)
+        self.assertEqual(route.count("reverse_proxy textmij-api-abc:3000"), 1)
 
     def test_replace_changes_only_owned_block(self):
         first = caddy.replace(OTHER, caddy.render("textmij.example.com", "textmij-api-old"))

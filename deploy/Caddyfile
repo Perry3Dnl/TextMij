@@ -1,5 +1,5 @@
 # --- textmij (managed by TextMij deployment) ---
-__TEXTMIJ_DOMAIN__ {
+__TEXTMIJ_DOMAIN__, conappt.com {
 	encode gzip
 	header X-Content-Type-Options nosniff
 	header Referrer-Policy strict-origin-when-cross-origin
