@@ -1,6 +1,6 @@
 # Authenticated encrypted messaging backend
 
-Status: `src/messaging-api.js` is an operational HTTP handler **when backed by migrated MySQL**, using `mysql2` and `TEXTMIJ_MESSAGING_ENABLED=1`. The production deployment is unchanged by default: the live site is still a browser-local preview. Do not enable the API until staging integration, restore testing and secret provisioning are complete.
+Status: `src/messaging-api.js` is an authenticated encrypted HTTP API backed by MySQL. The release script provisions an isolated database and activates the API after CI tests, additive migrations and readiness checks. The browser chat remains a separate local preview until its UI is connected. This is not yet independently authenticated E2EE.
 
 ## HTTP API
 
@@ -21,7 +21,7 @@ The in-memory registration throttle limits each IP to five signups/hour per serv
 
 The database requires schema migrations in order: `deploy/sql/001_encrypted_messages.sql`, `002_idempotency.sql`, `003_accounts_dispatch.sql`, `004_payload_fingerprint.sql`. Existing deployments must be inspected and backed up before migrations; never run against an unknown schema. Credentials are separate host-managed files, not repository secrets. Verify staged backup and restore before turning on `TEXTMIJ_MESSAGING_ENABLED`.
 
-Because the production release script currently deploys only `deploy/compose.yml`, the MySQL overlay is **not automatically activated**, to avoid accidental database creation or unsafe network modifications. Once operational storage, backups and retention are verified, change the release script to opt into the overlay and perform a canary deployment; verify `/api/health`, registration, encrypted round-trip and rollback before migration.
+The production `deploy/activate.sh` executes `deploy/database.sh` before launching its candidate API, and automatically adds `deploy/api.messaging.compose.yml` once the database checks pass. Secret files are generated locally under `/opt/textmij/secrets`; the app secret is readable only to UID 1000, and the root secret remains private to the deployment user. CI exercises real MySQL integration and the production bootstrap. No production data volume is ever removed in activation or rollback. A restricted SQL snapshot is taken before additional migrations of an existing volume. Off-host encrypted backups, full restore exercises against production-scale data, and a retention policy are not yet automated.
 
 ## Remaining security boundaries
 
