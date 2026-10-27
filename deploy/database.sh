@@ -42,6 +42,7 @@ docker inspect "$db_container" --format '{{json .NetworkSettings.Ports}}' \
   | python3 -c 'import json,sys; assert all(v is None for v in json.load(sys.stdin).values())'
 
 mysql_root() {
+  # shellcheck disable=SC2016 # Expand password inside the MySQL container.
   "${db[@]}" exec -T mysql sh -c 'MYSQL_PWD="$(cat /run/secrets/mysql_root_password)" exec mysql --batch --skip-column-names -uroot textmij'
 }
 migration_table="$(printf "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='textmij' AND table_name='schema_migrations';" | mysql_root)"
@@ -59,7 +60,10 @@ for version in 001 002 003 004; do
   sql_file="$release_dir/deploy/sql/${version}_"
   # Precisely one matching version file must exist.
   matches=( "${sql_file}"*.sql )
-  [ "${#matches[@]}" -eq 1 ] && [ -f "${matches[0]}" ] || { echo "Migration $version missing" >&2; exit 1; }
+  if [ "${#matches[@]}" -ne 1 ] || [ ! -f "${matches[0]}" ]; then
+    echo "Migration $version missing" >&2
+    exit 1
+  fi
   checksum="$(sha256sum "${matches[0]}" | awk '{print $1}')"
   migration_id="$((10#$version))"
   recorded="$(printf 'SELECT checksum FROM schema_migrations WHERE version=%s;' "$migration_id" | mysql_root)"
@@ -72,6 +76,7 @@ done
 
 if [ "$pending" = true ] && [ "$existing_volume" = true ]; then
   snapshot="$backup_dir/pre-migration-$(date -u +%Y%m%dT%H%M%SZ)-$$.sql.gz"
+  # shellcheck disable=SC2016 # Expand password inside the MySQL container.
   "${db[@]}" exec -T mysql sh -c 'MYSQL_PWD="$(cat /run/secrets/mysql_root_password)" exec mysqldump -uroot --single-transaction --routines --events --hex-blob textmij' \
     | gzip -9 > "$snapshot"
   test -s "$snapshot"
