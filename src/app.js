@@ -1,6 +1,14 @@
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 
+const appVersion = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
+function releaseHtml(html, revision) {
+  // Revision originates from deployment metadata; never interpolate arbitrary HTML.
+  const safeRevision = /^[a-zA-Z0-9._-]{1,80}$/.test(revision) ? revision : 'unknown';
+  return html.toString('utf8').replace('</head>', `  <meta name="conappt-version" content="${appVersion}">\n    <meta name="conappt-revision" content="${safeRevision}">\n  </head>`);
+}
+
+
 const assets = new Map([
   ['/', ['index.html', 'text/html']],
   ['/styles.css', ['styles.css', 'text/css']],
@@ -58,6 +66,7 @@ export function createApp({ revision = 'development', messaging = null } = {}) {
       body = JSON.stringify({ status: 'ok', service: 'textmij', revision });
     } else {
       ({ contentType, body } = assets.get(path));
+      if (path === '/') body = releaseHtml(body, revision);
     }
 
     response.writeHead(status, { 'Content-Type': contentType });
