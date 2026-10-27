@@ -1,0 +1,25 @@
+# Use only after database is provisioned, backed up, migrated, and restore-tested.
+# Add to the existing release's compose invocation as a second -f file.
+services:
+  api:
+    environment:
+      TEXTMIJ_MESSAGING_ENABLED: "1"
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: textmij
+      MYSQL_DATABASE: textmij
+      MYSQL_PASSWORD_FILE: /run/secrets/mysql_app_password
+    secrets:
+      - mysql_app_password
+    networks:
+      - proxy
+      - backend
+
+networks:
+  backend:
+    external: true
+    name: textmij_backend
+
+secrets:
+  mysql_app_password:
+    file: ${TEXTMIJ_MYSQL_APP_PASSWORD_FILE:?File for MySQL app password required}
