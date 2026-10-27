@@ -58,6 +58,8 @@ jobs:
         run: bash deploy/smoke.sh
       - name: Verify isolated MySQL and encrypted messaging API end to end
         run: bash deploy/mysql-smoke.sh
+      - name: Verify exact production MySQL bootstrap and persistence
+        run: bash deploy/database-smoke.sh
       - name: Package the tested image and the exact source revision
         run: |
           mkdir -p "$RUNNER_TEMP/textmij-release"
