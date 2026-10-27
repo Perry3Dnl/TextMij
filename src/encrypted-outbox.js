@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { validateEncryptedEnvelope } from './encrypted-envelope.js';
 
 // MySQL 8.4 prepared-statement repository. Database connection is injected so
@@ -13,14 +14,19 @@ export class EncryptedOutbox {
     if (typeof idempotencyKey !== 'string' || !/^[0-9a-f-]{36}$/.test(idempotencyKey)) throw new TypeError('Idempotency key required');
     const body = validateEncryptedEnvelope(envelope, tier);
     if (!/^[a-f0-9]{64}$/.test(body.recipientId)) throw new TypeError('Stable recipient ID required');
-    const args = [idempotencyKey, senderId, body.recipientId, body.template, body.ciphertext, body.nonce,
+    const digest = createHash('sha256').update(JSON.stringify([
+      body.recipientId, body.template, body.ciphertext.toString('base64'), body.nonce.toString('base64'),
+      body.wrappedKey.toString('base64'), body.keyVersion, body.imageCiphertext?.toString('base64') ?? null,
+      body.imageNonce?.toString('base64') ?? null, tier])).digest();
+    const args = [idempotencyKey, digest, senderId, body.recipientId, body.template, body.ciphertext, body.nonce,
       body.imageCiphertext ?? null, body.imageNonce ?? null, body.wrappedKey, body.keyVersion, tier];
     await this.db.execute(`INSERT INTO encrypted_messages
-      (idempotency_key, sender_business_id, recipient_device_id, message_type, ciphertext, nonce,
+      (idempotency_key, payload_hash, sender_business_id, recipient_device_id, message_type, ciphertext, nonce,
        image_ciphertext, image_nonce, wrapped_key, key_version, tier_at_acceptance)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`, args);
-    const [[row]] = await this.db.execute('SELECT id FROM encrypted_messages WHERE sender_business_id = ? AND idempotency_key = ?', [senderId, idempotencyKey]);
+    const [[row]] = await this.db.execute('SELECT id, payload_hash FROM encrypted_messages WHERE sender_business_id = ? AND idempotency_key = ?', [senderId, idempotencyKey]);
+    if (!row?.payload_hash || !timingSafeEqual(Buffer.from(row.payload_hash), digest)) throw new TypeError('Idempotency key reused for a different message');
     return { id: String(row.id) };
   }
   async nextQueued() {
