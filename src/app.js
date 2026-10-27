@@ -16,6 +16,7 @@ const assets = new Map([
   ['/app.js', ['app.js', 'text/javascript']],
   ['/model.js', ['model.js', 'text/javascript']],
   ['/crypto.js', ['crypto.js', 'text/javascript']],
+  ['/logo.js', ['logo.js', 'text/javascript']],
   ...['bootstrap.js','live-app.js','client.js','device-store.js','contact-code.js','icons.js','business-templates.js','qr.js','report-options.js','vendor/qrcodegen.js','vendor/jsQR.js'].map(file => ['/'+file,[file,'text/javascript']]),
   ['/live.css', ['live.css','text/css']],
   ['/icon.svg', ['icon.svg', 'image/svg+xml']],

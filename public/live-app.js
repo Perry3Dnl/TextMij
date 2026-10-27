@@ -1,4 +1,5 @@
 import { ConapptClient } from './client.js';
+import { optimizeCompanyLogo } from './logo.js';
 import { deviceGet,deviceSet } from './device-store.js';
 import { escapeHtml as html,byteLength,cleanBusinessProfile,safeExternalUrl,BUSINESS_THEMES,PROFILE_DAYS } from './model.js';
 import { INDUSTRIES,industryFor,searchIndustries,quickActionsFor,messageFromAction } from './business-templates.js';
@@ -179,8 +180,8 @@ function field(name,title,value='',type='text',extra='') {
 function profileEditor(item,p) {
   logoDraft=p.logo;
   main.innerHTML='<div class="company-profile-toolbar"><h1>Je bedrijfsprofiel</h1>'+button('Annuleren','cancel-edit','',true)+'</div><form id="company-profile-form" class="company-profile-form"><section class="card company-editor-panel">'+
-    '<div class="live-brand-editor"><label class="live-logo-editor" for="company-logo">'+avatar(item,'company-logo-fallback')+'<span>'+icon('edit')+' Logo wijzigen</span><input id="company-logo" type="file" accept="image/png,image/jpeg,image/webp" class="sr-only"></label><div>'+field('company-name','Bedrijfsnaam',item.name,'text','maxlength="80" required')+
-    '<label class="field-label" for="company-description">Beschrijving</label><textarea class="text-input" id="company-description" name="description" rows="4" maxlength="500">'+html(p.description)+'</textarea></div></div><p class="field-help" id="logo-feedback">PNG, JPEG of WebP · maximaal 90 KB</p>'+button('Logo verwijderen','remove-logo','',true)+'</section>'+
+    '<div class="live-brand-editor"><label class="live-logo-editor" for="company-logo">'+avatar(item,'company-logo-fallback')+'<span>'+icon('edit')+' Logo wijzigen</span><input id="company-logo" type="file" accept="image/*" class="sr-only"></label><div>'+field('company-name','Bedrijfsnaam',item.name,'text','maxlength="80" required')+
+    '<label class="field-label" for="company-description">Beschrijving</label><textarea class="text-input" id="company-description" name="description" rows="4" maxlength="500">'+html(p.description)+'</textarea></div></div><p class="field-help" id="logo-feedback">Afbeeldingen worden vierkant uitgesneden en verkleind tot maximaal 100 KB</p>'+button('Logo verwijderen','remove-logo','',true)+'</section>'+
     '<details class="card company-editor-panel"><summary>Contactgegevens</summary>'+field('company-phone','Telefoonnummer (optioneel)',p.phone)+field('company-website','Website (optioneel)',p.website,'url')+
     ['instagram','facebook','linkedin'].map(key=>field('social-'+key,key,p.socials[key],'url')).join('')+'</details>'+
     '<details class="card company-editor-panel"><summary>Openingstijden</summary><div class="company-hour-fields">'+PROFILE_DAYS.map(day=>'<div>'+field('hours-'+day,day,p.hours[day])+'</div>').join('')+'</div></details>'+
@@ -339,11 +340,8 @@ document.addEventListener('change',async event=>{
   if(event.target.id!=='company-logo')return;
   try {
     const file=event.target.files?.[0];if(!file)return;
-    if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>90*1024)throw new Error('Gebruik PNG, JPEG of WebP van maximaal 90 KB.');
-    const bytes=new Uint8Array(await file.arrayBuffer());
-    const valid=file.type==='image/png'&&bytes[0]===137&&bytes[1]===80&&bytes[2]===78&&bytes[3]===71||file.type==='image/jpeg'&&bytes[0]===255&&bytes[1]===216||file.type==='image/webp'&&String.fromCharCode(...bytes.slice(0,4))==='RIFF'&&String.fromCharCode(...bytes.slice(8,12))==='WEBP';
-    if(!valid)throw new Error('Dit bestand is geen geldige afbeelding.');
-    logoDraft='data:'+file.type+';base64,'+btoa(Array.from(bytes,b=>String.fromCharCode(b)).join(''));
+    document.querySelector('#logo-feedback').textContent='Logo wordt verwerkt…';
+    logoDraft=await optimizeCompanyLogo(file);
     const element=document.querySelector('.live-logo-editor');
     element.querySelector('.avatar')?.remove();
     const image=document.createElement('img');image.className='avatar company-logo-fallback';image.src=logoDraft;image.alt='';element.prepend(image);
