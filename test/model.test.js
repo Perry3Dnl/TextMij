@@ -270,3 +270,11 @@ test('business can send a plain chat message without title; structured templates
   assert.equal(sent.text, 'Hallo in de chat');
   assert.notEqual(addBusinessMessage(state, 'customer-sam', '', 'x'.repeat(1025)), null);
 });
+
+test('stored logo sanitization permits a compressed 100 KiB image but rejects oversized data', async () => {
+  const { cleanBusinessProfile } = await import('../public/model.js');
+  const valid = 'data:image/webp;base64,' + Buffer.alloc(100*1024).toString('base64');
+  assert.equal(cleanBusinessProfile({logo: valid}).logo, valid);
+  const huge = 'data:image/webp;base64,' + Buffer.alloc(102*1024).toString('base64');
+  assert.equal(cleanBusinessProfile({logo: huge}).logo, '');
+});
