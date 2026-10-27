@@ -33,7 +33,7 @@ This repository contains the deployment foundation and the first responsive web 
 - PR tests, container smoke tests, and automatic production deployment after successful checks on `main`.
 - Shared-Caddy routing with health checks and failure recovery.
 
-The interface is explicitly a **preview**: company conversations and the code are examples, and replies are stored in this browser only. Real device registration, server-side message storage, messaging endpoints, business authentication, push notifications, and the mobile shell are still to be implemented. Preview codes are not real delivery addresses.
+The existing browser interface is explicitly a **preview**: its example conversations are stored only in this browser. A separately authenticated server-side registration and encrypted message API has now been implemented; the browser preview is not yet wired to it. Independent E2EE public-key verification, mobile notifications, device migration and a packaged mobile shell are still unfinished. Preview codes are not real delivery addresses.
 
 ## Local development
 
@@ -92,3 +92,7 @@ A future account has an opaque random persistent identifier, independent of its 
 ## Prepared durable encrypted outbox (0.8.0)
 
 The new `src/encrypted-outbox.js` repository provides parameterized MySQL inserts for already-encrypted message envelopes, bounded per-recipient retrieval, a premium-first FIFO query and explicit status transition. `deploy/sql/002_idempotency.sql` adds a per-sender unique idempotency key without deleting existing rows. The database connection is injected, not opened by the production web server; this is **not an active message API**. Production MySQL is still not provisioned. The prototype must not be enabled before the database migration and integration tests in staging, encrypted backups and restore validation, authenticated account/key management, and a transactional claim/lease-based worker with retries and cross-worker pacing. Duplicate retries with the same key must also be checked against immutable payload fingerprints before use. See docs/E2EE.md for security limits.
+
+## Authenticated messaging API (version 0.9.0)
+
+The Node server can now register accounts, authenticate bearer tokens, accept validated ciphertext messages, persist messages in MySQL and expose an encrypted recipient inbox. When enabled, MySQL-backed dispatch limits the service to one released message each three seconds, with Premium FIFO before Standard FIFO. The release script now provisions TextMij's dedicated MySQL volume, private network and locally generated credentials, applies additive schema migrations and activates the authenticated messaging API after successful CI integration tests. Existing MySQL data is preserved and a restricted SQL snapshot is produced before future schema migrations. Confirm the deployed revision and database readiness from CI before relying on the service. Client-side chat, premium billing, independently authenticated E2EE keys and QR migration are not yet integrated. See [Messaging API deployment guide](docs/MESSAGING_API.md).

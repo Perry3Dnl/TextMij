@@ -8,11 +8,11 @@ const message = { version:1, recipientId, template:'title-text', ciphertext:base
 const idempotencyKey='12345678-1234-4234-8234-123456789abc';
 test('encrypted repository uses parameterized insert and never stores plaintext or accepts browser tier',async()=>{
  const calls=[];
- const db={execute:async(sql,args=[])=>{calls.push({sql,args});return sql.startsWith('SELECT id FROM') ? [[{id:9}]] : [{affectedRows:1}]}};
+ const db={execute:async(sql,args=[])=>{calls.push({sql,args});return sql.startsWith('SELECT id, payload_hash') ? [[{id:9,payload_hash:calls[0].args[1]}]] : [{affectedRows:1}]}};
  const outbox=new EncryptedOutbox(db);
  assert.deepEqual(await outbox.enqueue({senderId,tier:'standard',idempotencyKey,envelope:message}),{id:'9'});
  assert.match(calls[0].sql,/ON DUPLICATE KEY/);
- assert.equal(calls[0].args[4].equals(Buffer.alloc(40,7)),true);
+ assert.equal(calls[0].args[5].equals(Buffer.alloc(40,7)),true);
  assert.equal(calls[0].args.includes('plaintext'),false);
  assert.ok(calls[0].sql.includes('?'));
  await assert.rejects(outbox.enqueue({senderId,tier:'fake',idempotencyKey,envelope:message}),/tier/);

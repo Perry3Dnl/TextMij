@@ -62,11 +62,19 @@ if [ -L "$app_dir/current" ] && [ -f "$app_dir/current/.container" ]; then
   [[ "$previous_container" =~ ^textmij-api-[a-z0-9-]+$ ]] || { echo 'Invalid previous container' >&2; exit 1; }
 fi
 
+# Provision only TextMij's own private database, never any shared service or volume.
+# This is an additive schema rollout; backups are created before existing data is migrated.
+bash "$release_dir/deploy/database.sh" "$app_dir" "$release_dir"
+export TEXTMIJ_MYSQL_APP_PASSWORD_FILE="$app_dir/secrets/mysql_app_password"
+compose+=(-f "$release_dir/deploy/api.messaging.compose.yml")
 "${compose[@]}" config --quiet
 candidate_started=true
 "${compose[@]}" up -d --no-build --wait --wait-timeout 120
 docker exec "$TEXTMIJ_CONTAINER" node -e \
   "fetch('http://127.0.0.1:3000/api/health').then(async r=>{const b=await r.json();process.exit(r.ok&&b.service==='textmij'&&b.revision===process.env.APP_REVISION?0:1)}).catch(()=>process.exit(1))"
+# The HTTP API must be bound to the migrated private MySQL schema.
+docker exec "$TEXTMIJ_CONTAINER" node -e \
+  "fetch('http://127.0.0.1:3000/api/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 # Verify Docker DNS and reachability from Caddy's actual network namespace
 # before updating any public routing. The tested app image supplies Node.
 docker run --rm --read-only --cap-drop ALL --security-opt no-new-privileges:true \

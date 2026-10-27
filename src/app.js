@@ -15,7 +15,7 @@ const assets = new Map([
 }]));
 
 // The client is a local preview. Messaging and authentication endpoints follow.
-export function createApp({ revision = 'development' } = {}) {
+export function createApp({ revision = 'development', messaging = null } = {}) {
   return createServer((request, response) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Cache-Control', 'no-store');
@@ -27,6 +27,22 @@ export function createApp({ revision = 'development' } = {}) {
       response.end(JSON.stringify({ error: 'Invalid request URL' }));
       return;
     }
+    if (path === '/api/ready') {
+      if (!messaging || request.method !== 'GET') {
+        response.writeHead(503, { 'Content-Type': 'application/json; charset=utf-8' });
+        response.end(JSON.stringify({ status: 'unavailable' }));
+        return;
+      }
+      void messaging.pool.query('SELECT 1').then(() => {
+        response.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        response.end(JSON.stringify({status:'ready'}));
+      }).catch(() => {
+        response.writeHead(503, { 'Content-Type': 'application/json; charset=utf-8' });
+        response.end(JSON.stringify({status:'unavailable'}));
+      });
+      return;
+    }
+    if (path.startsWith('/api/v1/') && messaging) { void messaging.handle(request, response, path); return; }
     let status = 200;
     let body;
     let contentType = 'application/json; charset=utf-8';

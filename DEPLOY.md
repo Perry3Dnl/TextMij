@@ -75,8 +75,14 @@ The workflow also supports **Actions → Test and deploy → Run workflow** on `
   incoming/
 ```
 
-The foundation has no customer database yet. Persistent storage, backups, and schema migrations must be added before implementing messaging; deployment does not claim to preserve data that is not implemented.
+The 0.9.0 release provisions its own **MySQL 8.4** database using `deploy/database.sh`, before switching the Caddy route. It creates uniquely owned TextMij secret files in `/opt/textmij/secrets`, an internal-only `textmij_backend` network, and persistent Docker volume `textmij_mysql_data`. The API container joins both the reverse-proxy network and the internal database network. MySQL never publishes TCP ports and is not connected to Caddy's network. Four additive SQL migrations are checksum-tracked; an existing database without migration history is rejected rather than modified blindly. Before applying new migrations to an existing volume, the script writes a restricted gzip SQL backup under `/opt/textmij/backups` and verifies it. Deployment rollback preserves the entire volume and all existing backups; it cannot automatically roll schema backwards. Automatic off-host backups and complete disaster recovery still need an independent operating procedure and should be configured before using the service for important customer data.
 
 Release directories and Docker images are retained for recovery. There is no automatic disk cleanup yet; monitor space and remove only obsolete TextMij releases after confirming they are not `current` or `previous`. Never prune shared Docker resources as part of this repository's deployment.
 
 To redeploy a known revision, rerun its successful workflow on `main`; it retests and reloads the corresponding image in a new release directory. This restores application code only. Once a database is added, rollback must also account for schema compatibility.
+
+## Encrypted messaging API readiness
+
+Production releases after version 0.9.0 include an authenticated encrypted messaging API and MySQL-backed FIFO dispatch, with one dispatched message per three seconds globally. CI starts a disposable real MySQL instance, migrates it, and runs a complete encrypted HTTP send/receive test; a separate test runs the actual production bootstrap twice and checks that synthetic data survives. Deployment aborts before switching Caddy if the database, secrets, migrations or `/api/ready` checks fail. `/api/health` still reports the running Git SHA.
+
+The existing browser preview is not connected to the server messages yet. The public key directory is not independently authenticated against key substitution; therefore **this version must not be advertised as fully authenticated E2EE**. Never put device private keys or account bearer tokens in server logs. See `docs/MESSAGING_API.md` and `docs/E2EE.md` for protocol limitations.

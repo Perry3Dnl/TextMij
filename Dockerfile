@@ -3,6 +3,7 @@ ARG APP_REVISION=development
 ENV NODE_ENV=production PORT=3000 APP_REVISION=${APP_REVISION}
 WORKDIR /app
 COPY --chown=node:node package.json ./
+RUN npm install --omit=dev --ignore-scripts --no-audit --no-fund && npm cache clean --force
 COPY --chown=node:node src ./src
 COPY --chown=node:node public ./public
 USER node
