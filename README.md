@@ -110,3 +110,7 @@ The server injects two inspectable `<head>` meta tags into the root HTML respons
 ## Whole-business theme coverage
 
 In business mode, the saved White, Black, or Custom palette now colors the complete interface: page background, sidebar/mobile navigation, cards, controls, buttons, settings, conversation list and chat. The themed variables are scoped to the business mode; personal navigation remains independent and only the linked business chat inherits company colors. Custom changes are still saved locally in the browser preview and not synchronized to another device.
+
+## Company profile preview (0.11.0)
+
+Business → Settings includes an optional public company profile: small image logo (PNG/JPEG/WebP, max 90KB), description, telephone, HTTPS website and social links, free-text opening hours for each day, and three configurable outbound quick action links. The linked demo company name in a personal chat navigates to its themed company profile. Links open the company's own systems (e.g. booking or appointment software); Conappt does not implement or replace those workflows. Values are stored only in existing browser preview state, **not synchronized to other users/devices**. Logos as data URLs may increase local storage usage; remote media storage and authorization are needed for production. External URLs are HTTPS-only, credentials are rejected, and user-provided HTML is escaped.
