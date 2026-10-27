@@ -82,3 +82,9 @@ A MySQL 8.4 Docker Compose configuration on an isolated internal network, an enc
 ## Stable account identity and moving devices
 
 A future account has an opaque random persistent identifier, independent of its public contact code or mutable company name/email. Prototype transfer rendezvous tokens are short lived and single use; the UI, authentication, device-to-device key handover, and production registration are not available yet. The pair of account IDs binds sender/recipient metadata but does **not** serve as an E2EE key. See [account transfer design](docs/ACCOUNT_TRANSFER.md). Version 0.6.0.
+
+## Endpoint encryption prototype (0.7.0)
+
+`public/crypto.js` uses built-in WebCrypto P-256 ECDH, HKDF-SHA256 and AES-256-GCM to encrypt message title/content (and optionally an image) before upload. An ephemeral ECDH public key is transmitted in the existing envelope `wrappedKey` field; that field is **not a wrapped symmetric key** in this prototype. The client decrypts with its own non-exportable private key. The encrypted envelope validates against `src/encrypted-envelope.js`, and automated tests cover round-trip, participant context binding and tampering. This module is served as `/crypto.js` but is **not integrated into the chat UI, messaging API or database**.
+
+**Security limitation:** this prototype provides recipient confidentiality with a previously authenticated public key, not authenticated E2EE: without signed/safely verified public keys the server could substitute keys. It also lacks sender signing, forward secrecy across long-lived device key compromise, safe key recovery, a reviewed interoperable protocol and production key storage. Do not enable or advertise production E2EE until these are implemented and security reviewed. See docs/E2EE.md.
