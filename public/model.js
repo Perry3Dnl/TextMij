@@ -1,5 +1,33 @@
 export const STORAGE_KEY = 'textmij.preview.v1';
 export const VERIFY_PRICE_EUR = 20;
+export const BUSINESS_THEMES = Object.freeze({
+  white: Object.freeze({ label: 'Wit', accent: '#42633b', tint: '#e9f1e5', ink: '#304b2b', background: '#ffffff', foreground: '#263326' }),
+  black: Object.freeze({ label: 'Zwart (dark mode)', accent: '#a3d995', tint: '#263c30', ink: '#ecf7eb', background: '#161c19', foreground: '#f4f8f3' }),
+  custom: Object.freeze({ label: 'Eigen kleuren' }),
+});
+export const DEFAULT_BUSINESS_THEME = 'white';
+const HEX_COLOR = /^#[a-fA-F0-9]{6}$/;
+export function validThemeColors(colors) {
+  return colors && typeof colors === 'object' &&
+    ['accent', 'tint', 'ink', 'background', 'foreground'].every(key => HEX_COLOR.test(colors[key])) &&
+    Object.keys(colors).every(key => ['accent', 'tint', 'ink', 'background', 'foreground'].includes(key));
+}
+export function setBusinessTheme(state, theme, colors) {
+  if (!Object.hasOwn(BUSINESS_THEMES, theme)) return false;
+  if (theme === 'custom') {
+    if (!validThemeColors(colors)) return false;
+    state.business.customTheme = { ...colors };
+  }
+  state.business.theme = theme;
+  return true;
+}
+export function businessThemeFor(state, id, mode = state.mode) {
+  const active = mode === 'business' || id === 'studio-noord';
+  if (!active) return BUSINESS_THEMES.white;
+  const modeName = state.business.theme;
+  return modeName === 'custom' && validThemeColors(state.business.customTheme)
+    ? state.business.customTheme : BUSINESS_THEMES[modeName] ?? BUSINESS_THEMES.white;
+}
 export const DEMO_CODE = '7483-RGY-RCH';
 // Independent limits: increasing one must never change the other.
 export const MESSAGE_LIMITS = Object.freeze({ business: 1024, customer: 1024 });
@@ -78,7 +106,7 @@ export function escapeHtml(value) {
 export function freshState(now = Date.now()) {
   return {
     version: 1, mode: 'personal', name: 'Robin', startedAt: now,
-    business: { name: 'Studio Noord', email: 'hallo@studio-noord.example', demoVerification: 'inactive' },
+    business: { name: 'Studio Noord', email: 'hallo@studio-noord.example', demoVerification: 'inactive', theme: DEFAULT_BUSINESS_THEME, customTheme: { accent: '#245c91', tint: '#e5f1fc', ink: '#173e65', background: '#ffffff', foreground: '#263326' } },
     preferences: { notifications: true, sound: false, previews: true },
     read: [], readBusiness: [], muted: [], mutedBusiness: [],
     unreadPersonal: {}, unreadBusiness: {}, customers: [], replies: {},
@@ -97,6 +125,8 @@ export function restoreState(raw, now = Date.now()) {
     if (typeof data.business?.name === 'string' && data.business.name.trim()) state.business.name = Array.from(data.business.name.trim()).slice(0, 80).join('');
     if (typeof data.business?.email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.business.email) && data.business.email.length <= 254) state.business.email = data.business.email;
     if (['inactive', 'active'].includes(data.business?.demoVerification)) state.business.demoVerification = data.business.demoVerification;
+    if (validThemeColors(data.business?.customTheme)) state.business.customTheme = { ...data.business.customTheme };
+    if (Object.hasOwn(BUSINESS_THEMES, data.business?.theme ?? '')) state.business.theme = data.business.theme;
     if (Array.isArray(data.customers)) {
       const knownCodes = new Set(contactsFor(state, 'business').map((customer) => customer.code));
       for (const customer of data.customers.slice(0, 200)) {
