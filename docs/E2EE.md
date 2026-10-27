@@ -1,6 +1,6 @@
-# TextMij: E2EE and database architecture (foundation)
+# Conappt: encryption and database architecture
 
-**Status:** design and validation foundation, **not an operational messaging service**. Current web chats remain a browser-local demo. Do not describe the product as end-to-end encrypted until clients encrypt and decrypt on endpoints, authenticated recipient keys are published, and those properties are tested.
+**Status (0.13.0):** the live browser now encrypts/decrypts on the endpoints and uses the authenticated MySQL messaging API. Non-exportable device keys are stored in IndexedDB and browser authentication uses HttpOnly cookies. The public-key directory is not independently authenticated; sender signing and forward secrecy are also incomplete. Do not describe this as independently authenticated E2EE. Business reports are separately submitted server-readable moderation records, not chat ciphertext.
 
 ## Threat model and trust boundaries
 
@@ -16,10 +16,10 @@ Recommended protocol work before releasing E2EE:
 5. Specify what happens on device loss, key rotation, key revocation and backups. New device ID implies fresh device keys and no old history unless user explicitly opts in to encrypted recovery.
 6. Ship interoperable crypto test vectors and independent security review before claiming E2EE.
 
-The `src/encrypted-envelope.js` validator rejects plaintext JSON fields and bounds opaque ciphertext payloads but **does not encrypt or decrypt anything**. The SQL migration stores only encrypted envelopes; image attachments require separate schema additions/metadata before production. The in-memory queue from 0.4.0 still needs a durable outbox and authenticated delivery; it must not receive plaintext at production ingress.
+The `src/encrypted-envelope.js` validator rejects plaintext JSON fields and bounds opaque ciphertext payloads but **does not encrypt or decrypt anything**. The encrypted_messages table stores ciphertext envelopes, including optional encrypted image fields. The authenticated API and durable dispatcher are active; the in-memory queue remains a separately tested policy foundation. The live browser currently sends text only. Chat ingress must not accept plaintext.
 
-## Database setup (not performed automatically)
+## Database setup and preservation
 
-`deploy/mysql.compose.yml` is a **standalone foundation** and intentionally is not part of automatic production deployment. MySQL 8.4 has a named volume `textmij_mysql_data` and separate application/root credentials supplied by secret files outside git. Never expose port 3306, never run `down -v`, and never delete the named volume on deploy/rollback. The application currently has no MySQL driver, so connecting API to MySQL, applying `deploy/sql/001_encrypted_messages.sql` with a migration process, rolling out backups, and testing restore remain future work.
+`deploy/mysql.compose.yml` is activated by the existing production database bootstrap before routing a candidate release. MySQL 8.4 has a named volume `textmij_mysql_data` and separate application/root credentials supplied by secret files outside git. Never expose port 3306, never run `down -v`, and never delete the named volume on deploy/rollback. The Node application uses mysql2. Six additive, checksum-tracked migrations preserve existing accounts and ciphertext while adding profiles, connections and reports. See [MESSAGING_API.md](MESSAGING_API.md) for the protocol and moderation query. Restricted SQL snapshots are taken before pending migrations on an existing volume; off-host encrypted backups and production-scale restore procedures remain separate operational work.
 
 Before enabling a production database, confirm the host disk/backup setup, the existing deploy's replacement-container networking, secret provisioning and restore procedures. Do not create an unbacked production data store via CI. Keep the release rollback schema-compatible with existing data.

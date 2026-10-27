@@ -3,9 +3,10 @@ import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 // Stable opaque IDs are independent of public contact codes, email and company names.
 export function newAccountIdentity({ kind, name, email } = {}) {
   if (!['personal', 'business'].includes(kind)) throw new TypeError('Invalid account type');
-  if (kind === 'business' && (typeof name !== 'string' || !name.trim() || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) throw new TypeError('Valid business name and email required');
+  if (kind === 'business' && (typeof name !== 'string' || !name.trim())) throw new TypeError('Valid business name required');
+  if (email !== undefined && (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) throw new TypeError('Invalid optional email');
   const id = createHash('sha256').update('textmij:account:v1:').update(randomBytes(32)).digest('hex');
-  return Object.freeze({ id, kind, ...(kind === 'business' ? { name: name.trim(), email: email.trim().toLowerCase() } : {}) });
+  return Object.freeze({ id, kind, ...(kind === 'business' ? { name: name.trim(), ...(email === undefined ? {} : { email: email.trim().toLowerCase() }) } : {}) });
 }
 
 export function validateAccountId(id) {
