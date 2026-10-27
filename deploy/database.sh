@@ -31,7 +31,7 @@ for secret_file in "$TEXTMIJ_MYSQL_APP_PASSWORD_FILE" "$TEXTMIJ_MYSQL_ROOT_PASSW
   fi
 done
 # Only the unprivileged Node UID can read the app secret. Host directory stays 0700.
-docker run --rm --user 0:0 --network none --cap-drop ALL --cap-add CHOWN --cap-add FOWNER \
+docker run --rm --user 0:0 --network none --cap-drop ALL --cap-add CHOWN --cap-add FOWNER --cap-add DAC_OVERRIDE \
   --security-opt no-new-privileges:true \
   --mount "type=bind,source=$secrets_dir,target=/private-secrets" \
   --entrypoint sh "$TEXTMIJ_IMAGE" -c \
