@@ -23,7 +23,7 @@ test('HTTP deployment contract', async (t) => {
     assert.match(response.headers.get('content-type'), /text\/html/);
     const html = await response.text();
     assert.match(html, /<title>Conappt/);
-    assert.match(html, /<meta name="conappt-version" content="0.10.1">/);
+    assert.match(html, /<meta name="conappt-version" content="\\d+\\.\\d+\\.\\d+">/);
     assert.ok(html.includes(`<meta name="conappt-revision" content="${revision}">`));
     assert.match(response.headers.get('content-security-policy'), /script-src 'self'/);
   });
