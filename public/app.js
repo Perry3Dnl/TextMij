@@ -283,7 +283,10 @@ function updateComposer() {
 
 function render(focus = false) {
   const { page, id } = route();
-  document.body.classList.toggle('business-theme-active', isBusiness());
+  const validChat = page === 'gesprek' && Boolean(contactFor(id));
+  const chatCompanyTheme = !isBusiness() && validChat && id === 'studio-noord';
+  document.body.classList.toggle('business-theme-active', isBusiness() || chatCompanyTheme);
+  document.body.classList.toggle('customer-company-chat-theme', chatCompanyTheme);
   const theme = businessThemeFor(state, id);
   document.body.style.setProperty('--business-accent', theme.accent);
   document.body.style.setProperty('--business-tint', theme.tint);
@@ -291,8 +294,7 @@ function render(focus = false) {
   document.body.style.setProperty('--business-background', theme.background);
   document.body.style.setProperty('--business-ink', theme.ink);
   document.body.style.setProperty('--business-mode', state.business.theme);
-  document.body.style.colorScheme = isBusiness() && state.business.theme === 'black' ? 'dark' : 'light';
-  const validChat = page === 'gesprek' && Boolean(contactFor(id));
+  document.body.style.colorScheme = (isBusiness() || chatCompanyTheme) && state.business.theme === 'black' ? 'dark' : 'light';
   document.body.classList.toggle('is-chat', validChat);
   if (page === 'gesprekken') renderInbox();
   else if (page === 'instellingen') renderSettings();
