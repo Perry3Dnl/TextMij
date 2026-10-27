@@ -53,9 +53,29 @@
 #report-form > .dialog-actions { position:sticky;bottom:0;z-index:1;background:var(--white);padding:15px 0 3px;box-shadow:0 -10px 16px var(--white); }
 #app-dialog .text-input { margin:7px 0 10px; }
 #app-dialog .dialog-actions { flex-wrap:wrap; }
-.settings-card>form .button { margin-top:16px; }
+.live-settings { max-width:860px; display:grid; gap:20px; }
+.live-settings .settings-card { margin:0; padding:28px; }
+.live-settings .settings-card>h2 { margin:0 0 10px; font-size:19px; letter-spacing:-.35px; }
+.live-settings .settings-card>p { margin:0 0 22px; color:var(--muted); font-size:14px; line-height:1.8; }
+.live-settings .settings-card>form .button { margin-top:18px; }
+.settings-device-code { display:flex; flex-wrap:wrap; align-items:center; gap:14px; margin:0 0 22px; }
+.settings-device-code>span { font-family:monospace; font-size:20px; letter-spacing:1px; }
+.quick-overview { list-style:none; padding:0; margin:0 0 22px; display:grid; gap:8px; }
+.quick-overview button { display:flex; align-items:center; gap:12px; width:100%; padding:13px 14px; border:1px solid var(--line); border-radius:11px; background:var(--white); color:var(--ink); text-align:left; cursor:pointer; }
+.quick-overview button:hover { border-color:var(--green); }
+.quick-overview button:focus-visible { outline:2px solid var(--green); outline-offset:2px; }
+.quick-overview button>span:first-child { flex:1; min-width:0; }
+.quick-overview strong { display:block; font-size:12px; font-weight:600; line-height:1.5; }
+.quick-overview small { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; font-size:11px; color:var(--muted); line-height:1.6; margin-top:4px; overflow-wrap:anywhere; }
+.quick-overview svg { flex-shrink:0; width:16px; height:16px; opacity:.7; }
+#quick-message-editor textarea { resize:vertical; min-height:150px; line-height:1.7; }
+#quick-message-editor .dialog-actions { position:sticky; bottom:0; background:var(--white); padding:15px 0 3px; }
 .how-card>p { font-size:13px;line-height:1.8;margin-bottom:18px; }
 @media(max-width:700px) {
+  .live-settings { gap:16px; }
+  .live-settings .settings-card { padding:22px; }
+  .live-settings .settings-card>h2 { font-size:17px; }
+  .live-settings .settings-card>p { font-size:13px; }
   .start-grid { grid-template-columns:1fr;margin-top:22px;gap:15px; }
   .start-panel { padding:25px; }
   .start-panel p { font-size:13px; }

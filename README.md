@@ -2,7 +2,7 @@
 
 Conappt is a hosted business-to-customer messaging service. Customers receive a contact code without a phone number or email address. A business enters its company name, connects a customer, and sends updates from the app or its own software.
 
-## Current release: 0.14.0
+## Current release: 0.15.0
 
 - Real device and business accounts, authenticated with separate HttpOnly cookies for each role.
 - No required personal details. A business name is sufficient; an optional legacy API email field remains supported.
@@ -10,6 +10,8 @@ Conappt is a hosted business-to-customer messaging service. Customers receive a 
 - A customer taps their code to show a real QR code. A business scans it inside Conappt or enters the code manually.
 - Connections and public business profiles persist in MySQL and appear on both devices.
 - Searchable catalogue of industry starter packs, including a garage pack with ready-for-collection, progress, parts, approval and appointment messages.
+- Business home shows every quick message with an editable button name, title and message. Changes persist privately in the business profile, remain available after switching templates, and can be reset to defaults. Typed date/time/amount fields follow the placeholders still present in the edited message.
+- Settings cards have responsive internal spacing. The personal device code and QR remain available there; reloads, nickname changes and role switching reuse the same device identity without personal registration.
 - Customer replies and business updates use the existing ciphertext API. The live client polls while open.
 - Business profile editing, automatic square logo cropping/compression to 100 KiB, optional contact details/opening hours/external action links, and synchronized business chat themes. Logos also appear in navigation and account switching. Ordinary chats use one text field; industry templates retain structured titles.
 - A private **Bedrijf melden** form in the customer chat and company profile. Reports are stored in MySQL and receive a receipt only after commit.
