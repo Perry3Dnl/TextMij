@@ -86,6 +86,9 @@ jobs:
 
   deploy:
     name: Deploy production
+    permissions:
+      contents: read
+      statuses: write
     needs: [tests, image]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
@@ -117,3 +120,21 @@ jobs:
           sudo apt-get install -y --no-install-recommends sshpass
       - name: Upload and activate the tested release
         run: bash deploy/ship.sh "$RUNNER_TEMP/textmij-release"
+      - name: Report verified production status
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            -f state=success -f context=textmij/production \
+            -f description="Public HTTPS health verified the deployed Git revision" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+      - name: Report failed production status
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            -f state=failure -f context=textmij/production \
+            -f description="Production release failed; inspect rollback status" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

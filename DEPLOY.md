@@ -86,3 +86,7 @@ To redeploy a known revision, rerun its successful workflow on `main`; it retest
 Production releases after version 0.9.0 include an authenticated encrypted messaging API and MySQL-backed FIFO dispatch, with one dispatched message per three seconds globally. CI starts a disposable real MySQL instance, migrates it, and runs a complete encrypted HTTP send/receive test; a separate test runs the actual production bootstrap twice and checks that synthetic data survives. Deployment aborts before switching Caddy if the database, secrets, migrations or `/api/ready` checks fail. `/api/health` still reports the running Git SHA.
 
 The existing browser preview is not connected to the server messages yet. The public key directory is not independently authenticated against key substitution; therefore **this version must not be advertised as fully authenticated E2EE**. Never put device private keys or account bearer tokens in server logs. See `docs/MESSAGING_API.md` and `docs/E2EE.md` for protocol limitations.
+
+## Machine-readable production release result
+
+Starting in version 0.9.1, the deploy job posts `textmij/production` to GitHub commit statuses. `success` is recorded only after the deployment script verifies public HTTPS health returns the exact Git SHA. A failed release records `failure`, allowing automated status verification without exposing SSH secrets or changing the shared Caddy setup. See the workflow run for rollback details.
