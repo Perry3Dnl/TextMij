@@ -26,8 +26,17 @@ for secret_file in "$TEXTMIJ_MYSQL_APP_PASSWORD_FILE" "$TEXTMIJ_MYSQL_ROOT_PASSW
     mv -n "$tmp_file" "$secret_file"
     rm -f "$tmp_file"
   fi
-  chmod 0600 "$secret_file"
+  if [ "$secret_file" = "$TEXTMIJ_MYSQL_ROOT_PASSWORD_FILE" ]; then
+    chmod 0600 "$secret_file"
+  fi
 done
+# Only the unprivileged Node UID can read the app secret. Host directory stays 0700.
+docker run --rm --user 0:0 --network none --cap-drop ALL --cap-add CHOWN --cap-add FOWNER \
+  --security-opt no-new-privileges:true \
+  --mount "type=bind,source=$secrets_dir,target=/private-secrets" \
+  --entrypoint sh "$TEXTMIJ_IMAGE" -c \
+  'chown 1000:1000 /private-secrets/mysql_app_password && chmod 0400 /private-secrets/mysql_app_password'
+
 
 "${db[@]}" config --quiet
 "${db[@]}" up -d --wait --wait-timeout 180
