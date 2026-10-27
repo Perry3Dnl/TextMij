@@ -21,7 +21,7 @@ export function cleanBusinessProfile(input = {}) {
   const actions = Array.isArray(input.actions) ? input.actions.slice(0,3).map((a) => ({
     label: text(a?.label,35), url: safeExternalUrl(a?.url),
   })).filter(a => a.label && a.url) : [];
-  const logo = typeof input.logo === 'string' && /^data:image\/(png|jpeg|webp);base64,[a-zA-Z0-9+/]+=*$/.test(input.logo) && input.logo.length <= 140000 ? input.logo : '';
+  const logo = typeof input.logo === 'string' && /^data:image\/(png|jpeg|webp);base64,[a-zA-Z0-9+/]+=*$/.test(input.logo) && input.logo.length <= 136600 ? input.logo : '';
   return { description:text(input.description,500), phone:/^[+0-9().\s-]{0,35}$/.test(phone) ? phone : '', website:safeExternalUrl(input.website),
     socials, hours, actions, logo };
 }
