@@ -31,6 +31,11 @@ jobs:
         run: |
           npm run check
           npm test
+      - name: Verify one-minute benchmark in an isolated browser
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund
+          npx playwright install chromium
+          node scripts/benchmark-smoke.js
       - name: Test Caddy edits and deployment failure recovery
         run: python3 -m unittest discover -s tests -v
       - name: Check deployment shell scripts
@@ -140,6 +145,13 @@ jobs:
         with:
           name: textmij-${{ github.sha }}
           path: ${{ runner.temp }}/textmij-release
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Install deployment browser
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund
+          npx playwright install chromium
       - name: Install SSH password helper
         run: |
           sudo apt-get update -qq
@@ -153,7 +165,7 @@ jobs:
         run: |
           gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
             -f state=success -f context=textmij/production \
-            -f description="Public HTTPS health verified the deployed Git revision" \
+            -f description="HTTPS revision and 60-second browser round trips verified" \
             -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
       - name: Report failed production status
         if: failure()
@@ -162,5 +174,5 @@ jobs:
         run: |
           gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
             -f state=failure -f context=textmij/production \
-            -f description="Production release failed; inspect rollback status" \
+            -f description="Release or browser benchmark failed; inspect deployment logs" \
             -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

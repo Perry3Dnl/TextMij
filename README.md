@@ -2,7 +2,7 @@
 
 Conappt is a hosted business-to-customer messaging service. Customers receive a contact code without a phone number or email address. A business enters its company name, connects a customer, and sends updates from the app or its own software.
 
-## Current release: 0.13.0
+## Current release: 0.14.0
 
 - Real device and business accounts, authenticated with separate HttpOnly cookies for each role.
 - No required personal details. A business name is sufficient; an optional legacy API email field remains supported.
@@ -62,6 +62,17 @@ Only an authenticated personal account can report a connected business. The serv
 Reports use a client request UUID for safe retries: replaying an identical submission returns the original receipt; reusing it with a different payload is rejected. Database transactions and an account row lock serialize concurrent requests. Report contents are readable by Conappt moderators, kept separate from ciphertext chat, and never exposed through a public listing API or to the reported company. No conversation history, email or phone number is automatically attached.
 
 Reports are available to authorized server/database operators through the moderation query in [docs/MESSAGING_API.md](docs/MESSAGING_API.md). There is no moderation dashboard, automatic notification email, automatic account suspension or automated report-retention job in this release.
+
+## Automatic round-trip development benchmark (0.13.0)
+
+After each successful production activation, a Chromium browser loads `https://conappt.com` and verifies the exact release revision. The browser runs six increasing bulk bursts at 0, 10, 20, 30, 40 and 50 seconds. Each message contains **1024 binary bytes in each direction**, including a unique sequence number; random content prevents compression from inflating the result. Messages travel browser → public HTTPS/Caddy → Node → browser. The browser compares every returned byte and counts only complete returns within the same 60-second window. A return counts as **one round-trip message**, not two messages. No extrapolated totals or abbreviated millions are displayed.
+
+The bottom-of-screen **Dev-test** label shows the full completed count and messages not returned before the deadline. Hover for sent counts, measurement time, revision and methodology. `/api/benchmark` exposes aggregate results and per-burst counts without credentials or payloads. Results survive process/container restarts in a dedicated Docker volume and are only shown for the matching release revision. Ordinary visitors fetch results; they do not generate load.
+
+This is **measured transport throughput**, not a proven absolute server maximum or production chat delivery throughput. It excludes account authorization, encryption, MySQL persistence and the real message scheduler (which currently releases one message per three seconds). Browser CPU, network path, six concurrent HTTP requests and batch overhead also affect the measured count. Every binary HTTP batch carries at most 256 messages (256 KiB); workers apply backpressure while burst demand grows adaptively, with no small message-count cap. Failed requests and messages outstanding/late at the deadline are included in the published result rather than counted as delivered.
+
+Load endpoints require a fresh deployment-only credential transferred over pinned SSH, a single active run and a short measurement window. There is no public start button. Diagnostic traffic is never inserted into customer messages or databases. CI runs the same full-minute browser test against an isolated local server before release. A failed post-deployment benchmark fails the workflow/production status and remains visible as pending/failed; it does not undo an otherwise healthy activation or touch existing data. No mobile package is currently implemented in this repository.
+
 
 ## Release verification
 

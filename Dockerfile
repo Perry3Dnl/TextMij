@@ -6,6 +6,7 @@ COPY --chown=node:node package.json ./
 RUN npm install --omit=dev --ignore-scripts --no-audit --no-fund && npm cache clean --force
 COPY --chown=node:node src ./src
 COPY --chown=node:node public ./public
+RUN mkdir /app/benchmark-data && chown node:node /app/benchmark-data
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=5s --timeout=3s --start-period=5s --retries=12 \

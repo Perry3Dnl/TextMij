@@ -1,4 +1,5 @@
 import { ConapptClient } from './client.js';
+import { startBenchmarkLabel } from './benchmark.js';
 import { optimizeCompanyLogo } from './logo.js';
 import { deviceGet,deviceSet } from './device-store.js';
 import { escapeHtml as html,byteLength,cleanBusinessProfile,safeExternalUrl,BUSINESS_THEMES,PROFILE_DAYS } from './model.js';
@@ -434,3 +435,5 @@ try {
 } catch(error){welcome(error.message);}
 setInterval(()=>void refresh(),2000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refresh();});
+
+startBenchmarkLabel(document.querySelector('#benchmark-status'));

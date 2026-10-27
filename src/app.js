@@ -1,5 +1,6 @@
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
+import { BenchmarkApi } from './benchmark.js';
 
 const appVersion = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 function releaseHtml(html, revision) {
@@ -17,6 +18,7 @@ const assets = new Map([
   ['/model.js', ['model.js', 'text/javascript']],
   ['/crypto.js', ['crypto.js', 'text/javascript']],
   ['/logo.js', ['logo.js', 'text/javascript']],
+  ['/benchmark.js', ['benchmark.js', 'text/javascript']],
   ...['bootstrap.js','live-app.js','client.js','device-store.js','contact-code.js','icons.js','business-templates.js','qr.js','report-options.js','vendor/qrcodegen.js','vendor/jsQR.js'].map(file => ['/'+file,[file,'text/javascript']]),
   ['/live.css', ['live.css','text/css']],
   ['/icon.svg', ['icon.svg', 'image/svg+xml']],
@@ -26,7 +28,7 @@ const assets = new Map([
 }]));
 
 // The live client uses authenticated device profiles. The original preview remains opt-in.
-export function createApp({ revision = 'development', messaging = null } = {}) {
+export function createApp({ revision = 'development', messaging = null, benchmark = new BenchmarkApi({ revision }) } = {}) {
   return createServer((request, response) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Permissions-Policy', 'camera=(self), microphone=()');
@@ -37,6 +39,13 @@ export function createApp({ revision = 'development', messaging = null } = {}) {
     catch {
       response.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
       response.end(JSON.stringify({ error: 'Invalid request URL' }));
+      return;
+    }
+    if (path === '/api/benchmark' || path.startsWith('/api/benchmark/')) {
+      void benchmark.handle(request, response, path).catch(() => {
+        if (!response.headersSent) response.writeHead(500);
+        response.end();
+      });
       return;
     }
     if (path === '/api/ready') {

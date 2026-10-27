@@ -6,3 +6,5 @@ __pycache__/
 *.pyc
 test-results/
 playwright-report/
+
+.benchmark-token

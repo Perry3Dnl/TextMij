@@ -67,6 +67,9 @@ fi
 bash "$release_dir/deploy/database.sh" "$app_dir" "$release_dir"
 export TEXTMIJ_MYSQL_APP_PASSWORD_FILE="$app_dir/secrets/mysql_app_password"
 compose+=(-f "$release_dir/deploy/api.messaging.compose.yml")
+export TEXTMIJ_BENCHMARK_TOKEN_FILE="$release_dir/.benchmark-token"
+test -s "$TEXTMIJ_BENCHMARK_TOKEN_FILE"
+compose+=(-f "$release_dir/deploy/benchmark.compose.yml")
 "${compose[@]}" config --quiet
 candidate_started=true
 "${compose[@]}" up -d --no-build --wait --wait-timeout 120
