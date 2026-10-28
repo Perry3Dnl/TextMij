@@ -12,6 +12,13 @@ async function fullScreenChat(page) {
   await expect(page.getByRole('button',{name:'Bericht versturen',exact:true})).toBeInViewport();
   await noOverflow(page);
 }
+async function conversationOnly(page) {
+  const overlay=page.getByRole('dialog',{name:'Gespreksinstellingen',exact:true});
+  await expect(overlay).toBeVisible();
+  await expect(overlay.getByRole('heading',{name:/Bedrijfsthema|Je bedrijf|Dit apparaat|Zo heet je hier|Hoe wil je genoemd/})).toHaveCount(0);
+  await expect(overlay.getByRole('button',{name:/Wissel van|Bedrijfstemplate|Zwart/})).toHaveCount(0);
+  await expect(overlay.getByLabel(/Bedrijfsnaam|Naam of bijnaam|Naam of gebruikersnaam/)).toHaveCount(0);
+}
 for(const width of [320,390,1200]) {
   test(`live sessions, settings, drafts and role switching at ${width}px`,async({browser},testInfo)=>{
     const customerContext=await browser.newContext({viewport:{width,height:844}});
@@ -38,14 +45,18 @@ for(const width of [320,390,1200]) {
     await fullScreenChat(business);
     await business.locator('#reply').fill('Een conceptbericht');
     await business.getByRole('button',{name:'Gespreksinstellingen'}).click();
-    await expect(business.getByRole('dialog',{name:'Gespreksinstellingen',exact:true})).toBeVisible();
+    await conversationOnly(business);
     await noOverflow(business);
-    await business.getByRole('button',{name:'Zwart (dark mode)',exact:true}).click();
-    await expect(business.getByRole('button',{name:'Zwart (dark mode)',exact:true})).toHaveAttribute('aria-pressed','true');
     await business.getByRole('button',{name:'Instellingen sluiten'}).click();
     await expect(business.locator('#reply')).toHaveValue('Een conceptbericht');
     await business.getByRole('link',{name:'Terug naar gesprekken'}).click();
+    await business.getByRole('button',{name:'Instellingen',exact:true}).click();
+    await expect(business.getByRole('heading',{name:'Bedrijfsthema',exact:true})).toBeVisible();
+    await business.getByRole('button',{name:'Zwart (dark mode)',exact:true}).click();
+    await expect(business.getByRole('button',{name:'Zwart (dark mode)',exact:true})).toHaveAttribute('aria-pressed','true');
+    await business.getByRole('button',{name:'Instellingen sluiten'}).click();
     await business.locator('.session-row [data-action="settings"]').click();
+    await conversationOnly(business);
     await expect(business.locator('#settings-dialog .session-context')).toContainText('Sam');
     await business.getByRole('link',{name:'Open gesprek',exact:true}).click();
     await expect(business.locator('#settings-dialog')).not.toBeVisible();
@@ -56,6 +67,8 @@ for(const width of [320,390,1200]) {
     await customer.screenshot({path:testInfo.outputPath('customer-inbox.png'),fullPage:true});
     await customer.locator('.session-row [data-action="settings"]').click();
     await expect(customer.locator('#settings-dialog .session-context')).toContainText('Garage <Test>');
+    await conversationOnly(customer);
+    await expect(customer.locator('#settings-dialog').getByRole('button',{name:'Bedrijf melden',exact:true})).toBeVisible();
     await expect(customer.locator('.chat-panel')).toHaveCount(0);
     await customer.keyboard.press('Escape');
     await expect(customer.locator('#settings-dialog')).not.toBeVisible();
@@ -64,6 +77,7 @@ for(const width of [320,390,1200]) {
     await fullScreenChat(customer);
     await customer.locator('#reply').fill('Mijn concept');
     await customer.getByRole('button',{name:'Gespreksinstellingen'}).click();
+    await conversationOnly(customer);
     await customer.screenshot({path:testInfo.outputPath('customer-settings.png')});
     await customer.getByRole('link',{name:'Open gesprek',exact:true}).click();
     await expect(customer.locator('#settings-dialog')).not.toBeVisible();
@@ -98,7 +112,7 @@ test('example uses the same session navigation for personal and business profile
   await page.goto('/?preview=1#home');
   await expect(page.getByRole('heading',{name:'Gesprekken',exact:true})).toBeVisible();
   await page.locator('.session-row [data-action="settings"]').first().click();
-  await expect(page.locator('#settings-dialog')).toBeVisible();
+  await conversationOnly(page);
   await page.getByRole('button',{name:'Instellingen sluiten'}).click();
   await page.locator('.conversation-row').first().click();
   await expect(page.locator('.chat-panel')).toBeVisible();
@@ -107,12 +121,26 @@ test('example uses the same session navigation for personal and business profile
   await page.keyboard.press('Escape');
   await expect(page.locator('#reply')).toHaveValue('Concept in voorbeeld');
   await page.getByRole('button',{name:'Gespreksinstellingen'}).click();
+  await conversationOnly(page);
+  await page.getByRole('button',{name:'Meldingen voor dit gesprek uitzetten',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Meldingen voor dit gesprek aanzetten',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Instellingen sluiten'}).click();
+  await page.getByRole('link',{name:'Terug naar gesprekken'}).click();
+  await page.getByRole('button',{name:'Instellingen',exact:true}).click();
+  await expect(page.getByLabel('Naam of gebruikersnaam',{exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Wissel van account',exact:true}).click();
   await page.locator('[data-action="choose-account"][data-mode="business"]').click();
   await expect(page.getByRole('heading',{name:'Klantgesprekken',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Instellingen',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Bedrijfsthema',exact:true})).toBeVisible();
+  await expect(page.getByLabel('Bedrijfsnaam',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Instellingen sluiten'}).click();
+  await page.locator('.session-row [data-action="settings"]').first().click();
+  await conversationOnly(page);
+  await page.getByRole('button',{name:'Instellingen sluiten'}).click();
   await page.locator('.conversation-row').first().click();
   await page.getByRole('button',{name:'Gespreksinstellingen'}).click();
-  await expect(page.locator('#settings-dialog')).toBeVisible();
+  await conversationOnly(page);
   await noOverflow(page);
   await page.screenshot({path:testInfo.outputPath('example-business-settings.png')});
   expect(errors).toEqual([]);

@@ -175,14 +175,18 @@ function profileEditor(item,p) {
 function settings(id) {
   settingsContactId=id;
   const item=contact(id);
+  if(id) {
+    if(!item){toast('Gesprek niet gevonden.');return;}
+    showSettings('<section class="card settings-card session-context">'+avatar(item)+'<h3>'+html(label(item))+'</h3><a class="button secondary" href="#gesprek/'+item.accountId+'">Open gesprek</a> '+(!business()?'<a class="button secondary" href="#bedrijf/'+item.accountId+'">Bedrijfsprofiel</a> '+button('Bedrijf melden','report','data-id="'+item.accountId+'"',true):'')+'</section>','Gespreksinstellingen');
+    return;
+  }
   const a=client.account;
-  const content=(item?'<section class="card settings-card session-context">'+avatar(item)+'<h3>'+html(label(item))+'</h3><a class="button secondary" href="#gesprek/'+item.accountId+'">Open gesprek</a> '+(!business()?'<a class="button secondary" href="#bedrijf/'+item.accountId+'">Bedrijfsprofiel</a> '+button('Bedrijf melden','report','data-id="'+item.accountId+'"',true):'')+'</section>':'')+
-    (business()?'<section class="card settings-card"><h2>Je bedrijf</h2><p>'+html(a.name)+'</p><a class="button secondary" href="#bedrijf/'+a.accountId+'">Bedrijfsprofiel bekijken</a> '+button('Bedrijfstemplate','industries','',true)+'</section>':
+  const content=(business()?'<section class="card settings-card"><h2>Je bedrijf</h2><p>'+html(a.name)+'</p><a class="button secondary" href="#bedrijf/'+a.accountId+'">Bedrijfsprofiel bekijken</a> '+button('Bedrijfstemplate','industries','',true)+'</section>':
     '<section class="card settings-card"><h2>Hoe wil je genoemd worden?</h2><p>Een bijnaam is genoeg. Dit is optioneel.</p><form id="personal-profile">'+field('personal-name','Naam of bijnaam',a.name==='Conappt-gebruiker'?'':a.name,'text','maxlength="80"')+'<button class="button" type="submit">Opslaan</button>'+errorLine+'</form></section>')+
     (business()?'<section class="card settings-card"><h2>Bedrijfsthema</h2><p>Ook je klanten zien dit thema in hun gesprek met jou.</p><div class="theme-options">'+Object.entries(BUSINESS_THEMES).map(([key,value])=>button(html(value.label),'theme','data-id="'+key+'" aria-pressed="'+(a.theme===key)+'"',a.theme!==key)).join('')+'</div>'+
     (a.theme==='custom'?'<form id="custom-theme" class="theme-custom-fields">'+[['accent','Accent'],['tint','Berichtachtergrond'],['ink','Berichttekst'],['background','Achtergrond'],['foreground','Tekst']].map(([key,title])=>field(key,title,a.customTheme?.[key]||BUSINESS_THEMES.white[key],'color')).join('')+'<button class="button" type="submit">Thema opslaan</button>'+errorLine+'</form>':'')+'</section>':'')+
     '<section class="card settings-card"><h2>Dit apparaat</h2><p>Conappt ververst je gesprekken zolang de app openstaat. Achtergrondmeldingen en het overzetten naar een ander apparaat zijn nog niet beschikbaar.</p>'+button('Wissel van profiel','switch-account','',true)+'</section>';
-  showSettings(content,item?'Gespreksinstellingen':'Instellingen');
+  showSettings(content);
 }
 
 function render() {

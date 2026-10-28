@@ -173,13 +173,22 @@ function switchRow(key, title, description) {
 
 function sessionSettingsContent() {
   const item=contactFor(settingsContactId);
-  return (item?`<section class="card settings-card session-context">${avatar(item)}<h3>${html(item.name)}</h3><button class="button secondary" data-action="mute-chat" data-id="${item.id}" aria-pressed="${mutedChats().includes(item.id)}" aria-label="${mutedChats().includes(item.id)?'Meldingen voor dit gesprek aanzetten':'Meldingen voor dit gesprek uitzetten'}">${icon(mutedChats().includes(item.id)?'bellOff':'bell')}</button><a class="button secondary" href="#gesprek/${item.id}">Open gesprek</a> <button class="button secondary" data-action="business-info" data-id="${item.id}">${icon('info')} Over dit gesprek</button></section>`:'')+`<div class="settings-account"><button class="button secondary" data-action="switch-account">${icon(isBusiness()?'business':'person')} Wissel van account</button></div>`;
+  return (item?`<section class="card settings-card session-context">${avatar(item)}<h3>${html(item.name)}</h3><button class="button secondary" data-action="mute-chat" data-id="${item.id}" aria-pressed="${mutedChats().includes(item.id)}" aria-label="${mutedChats().includes(item.id)?'Meldingen voor dit gesprek aanzetten':'Meldingen voor dit gesprek uitzetten'}">${icon(mutedChats().includes(item.id)?'bellOff':'bell')}</button><a class="button secondary" href="#gesprek/${item.id}">Open gesprek</a> <button class="button secondary" data-action="business-info" data-id="${item.id}">${icon('info')} Over dit gesprek</button></section>`:'');
+}
+
+function accountSettingsContent() {
+  return `<div class="settings-account"><button class="button secondary" data-action="switch-account">${icon(isBusiness()?'business':'person')} Wissel van account</button></div>`;
 }
 
 function renderSettings(id) {
   settingsContactId=id;
+  if(id) {
+    if(!contactFor(id)){toast('Gesprek niet gevonden.');return;}
+    showSettings(sessionSettingsContent(),'Gespreksinstellingen');
+    return;
+  }
   if (isBusiness()) { renderBusinessSettings(); return; }
-  showSettings(`${sessionSettingsContent()}
+  showSettings(`${accountSettingsContent()}
     <div class="settings-layout"><div>
       <section class="card settings-card"><div class="settings-section-heading"><h2>Zo heet je hier</h2><p>Deze naam wordt bij je berichten getoond.</p></div><form class="profile-form" id="profile-form"><label class="field-label" for="display-name">Naam of gebruikersnaam</label><input class="text-input" id="display-name" name="name" value="${html(state.name)}" maxlength="60" autocomplete="nickname" required><div class="form-footer"><p class="field-help">Gewoon hoe je genoemd wilt worden.</p><button class="button" id="save-name" type="submit" disabled>Opslaan</button></div><p class="form-error" id="name-error" role="alert" hidden></p></form></section>
       <section class="card settings-card"><div class="settings-section-heading"><h2>Meldingen</h2><p>Bewaar je voorkeuren voor dit apparaat. In deze voorbeeldversie worden nog geen meldingen verstuurd.</p></div>${switchRow('notifications', 'Nieuwe berichten', 'Een melding wanneer er iets nieuws voor je is.')}${switchRow('sound', 'Een geluidje erbij', 'Een subtiele toon bij een nieuw bericht.')}${switchRow('previews', 'Berichtvoorbeeld tonen', 'Laat een stukje van het bericht in de melding zien.')}</section>
@@ -223,7 +232,7 @@ function businessProfileEditor() {
 }
 
 function renderBusinessSettings() {
-  showSettings(`${sessionSettingsContent()}
+  showSettings(`${accountSettingsContent()}
     <div class="settings-layout"><div><section class="card settings-card"><div class="settings-section-heading"><h2>Je bedrijfsprofiel</h2><p>Deze voorbeeldgegevens worden lokaal bewaard.</p></div><form class="profile-form" id="business-profile-form"><label class="field-label" for="business-name">Bedrijfsnaam</label><input class="text-input" id="business-name" name="business-name" value="${html(state.business.name)}" maxlength="80" autocomplete="organization" required><label class="field-label extra-field" for="business-email">E-mailadres</label><input class="text-input" id="business-email" name="business-email" type="email" value="${html(state.business.email)}" maxlength="254" autocomplete="email" required><div class="form-footer"><p class="field-help">Alleen een bedrijfsnaam en e-mailadres.</p><button class="button" type="submit">Opslaan</button></div><p class="form-error" id="business-error" role="alert" hidden></p></form></section>
     ${businessThemePicker()}
     <section class="card settings-card"><div class="settings-section-heading"><h2>Bedrijfsverificatie</h2><p>Geef je bedrijfsnaam een herkenbare blauwe rand. €${VERIFY_PRICE_EUR} per maand wanneer betalingen echt worden ingeschakeld.</p></div><div class="verification-plan"><div><strong>${hasDemoVerification(state) ? 'Demo-verificatie actief' : 'Gratis bedrijfsprofiel'}</strong><p>${hasDemoVerification(state) ? 'De blauwe demo-markering is zichtbaar. Er is geen identiteit gecontroleerd en niets afgeschreven.' : 'Berichten en klantgesprekken blijven gratis. Probeer de markering zonder afschrijving.'}</p></div>${verificationLabel()}<button class="button ${hasDemoVerification(state) ? 'secondary' : ''}" type="button" data-action="${hasDemoVerification(state) ? 'cancel-verification' : 'start-verification'}">${hasDemoVerification(state) ? 'Demo-verificatie uitschakelen' : 'Probeer verificatie · €20/maand'}</button><p class="field-help">Demo: geen echte betaling, abonnement of controle van bedrijfsgegevens.</p></div></section>
