@@ -157,15 +157,83 @@
 .reputation-warning{margin-top:16px;padding:14px;border-left:4px solid #c62828;background:#fff1f1;color:#761616;border-radius:5px}
 .reputation-warning p{margin:7px 0 0}
 
-/* Direct, touch-friendly conversation actions beneath each session preview. */
-.session-app .session-row{display:grid;grid-template-columns:minmax(0,1fr);gap:0;padding-bottom:5px}
-.session-app .session-row .conversation-row{width:100%;min-width:0;padding:13px 10px 5px 0}
-.session-app .conversation-bar{display:flex;justify-content:flex-end;align-items:center;gap:4px;padding:0 8px 3px 0}
-.session-app .conversation-bar-action{display:inline-flex;align-items:center;justify-content:center;width:42px;height:40px;min-width:42px;border-radius:10px;color:var(--muted);border:1px solid transparent;background:transparent}
-.session-app .conversation-bar-action:hover,.session-app .conversation-bar-action:focus-visible{background:var(--green-light);color:var(--ink);border-color:var(--line)}
-.session-app .conversation-bar-action[aria-pressed="true"],.session-app .conversation-bar-action[data-has-note="true"]{color:var(--green);background:var(--green-light)}
-.session-app .conversation-bar-action svg{height:19px;width:19px}
+/* One-row session layout: chat summary and five actions share the same baseline. */
+.session-app .session-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:4px;
+  padding:0;
+  min-width:0;
+}
+.session-app .session-row .conversation-row{
+  display:flex;
+  min-width:0;
+  width:100%;
+  gap:8px;
+  padding:11px 2px 11px 0;
+  border:0;
+}
+.session-app .session-row .conversation-row .avatar{
+  width:36px;
+  height:36px;
+  font-size:18px;
+  border-radius:10px;
+}
+.session-app .session-row .conversation-copy,
+.session-app .session-row .conversation-top,
+.session-app .session-row .conversation-bottom{
+  min-width:0;
+}
+.session-app .session-row .conversation-top{gap:3px}
+.session-app .session-row .conversation-name,
+.session-app .session-row .conversation-preview{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  min-width:0;
+}
+.session-app .session-row .conversation-bottom{margin-top:3px;gap:3px}
+.session-app .conversation-bar{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  flex-wrap:nowrap;
+  gap:1px;
+  padding:0;
+}
+.session-app .conversation-bar-action{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:34px;
+  height:38px;
+  min-width:34px;
+  flex-shrink:0;
+  padding:0;
+  border-radius:8px;
+  color:var(--muted);
+  border:1px solid transparent;
+  background:transparent;
+}
+.session-app .conversation-bar-action:hover,
+.session-app .conversation-bar-action:focus-visible{
+  background:var(--green-light);
+  color:var(--ink);
+  border-color:var(--line);
+}
+.session-app .conversation-bar-action[aria-pressed="true"],
+.session-app .conversation-bar-action[data-has-note="true"]{
+  color:var(--green);
+  background:var(--green-light);
+}
+.session-app .conversation-bar-action svg{height:18px;width:18px}
 @media(max-width:380px){
-  .session-app .conversation-bar{gap:2px}
-  .session-app .conversation-bar-action{min-width:40px;width:40px;height:40px}
+  .session-app .session-row{gap:2px}
+  .session-app .session-row .conversation-row{gap:5px}
+  .session-app .session-row .conversation-row .avatar{width:31px;height:31px;font-size:16px}
+  .session-app .conversation-bar{gap:0}
+  .session-app .conversation-bar-action{min-width:29px;width:29px;height:36px}
+  .session-app .conversation-bar-action svg{width:17px;height:17px}
+  .session-app .session-row .conversation-time{font-size:9px}
 }
