@@ -251,3 +251,36 @@
 .quick-add{justify-content:center;border-style:dashed;color:var(--green);font-weight:600}
 .quick-add svg{width:22px;height:22px}
 #external-action-list .live-action-editor{margin:10px 0}
+
+/* Give mobile website content more of the available width.
+   Keep desktop gutters and full-screen conversations unchanged. */
+@media (max-width:760px) {
+  .session-app:not(.is-chat) main {
+    padding-left:max(10px,env(safe-area-inset-left));
+    padding-right:max(10px,env(safe-area-inset-right));
+  }
+  .session-app .company-profile-form {
+    padding-left:0;
+    padding-right:0;
+    gap:12px;
+  }
+  .session-app .company-profile-form .company-editor-panel {
+    padding:14px 12px;
+  }
+  .session-app .live-brand-editor {
+    grid-template-columns:88px minmax(0,1fr);
+    gap:12px;
+  }
+  .session-app .company-profile-toolbar {
+    gap:10px;
+  }
+  .session-app .company-profile-toolbar h1 {
+    min-width:0;
+  }
+}
+@media (max-width:360px) {
+  .session-app .live-brand-editor {
+    grid-template-columns:76px minmax(0,1fr);
+    gap:10px;
+  }
+}
