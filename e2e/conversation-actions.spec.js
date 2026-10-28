@@ -40,6 +40,11 @@ for(const role of ['personal','business']) {
     await expect(bar.locator('.conversation-menu-panel')).toHaveCSS('animation-name','conversation-slide-left');
     // The five icon buttons slide toward the chat text, aligned with the row,
     // without creating a vertical dropdown or increasing the row's height.
+    await expect.poll(async()=>owner.locator('.session-row').first().evaluate(row=>{
+      const trigger=row.querySelector('.conversation-bar>summary').getBoundingClientRect();
+      const panel=row.querySelector('.conversation-menu-panel').getBoundingClientRect();
+      return panel.right<=trigger.left+1;
+    })).toBe(true);
     const inline=await owner.locator('.session-row').first().evaluate(row=>{
       const summary=row.querySelector('.conversation-bar>summary').getBoundingClientRect();
       const panel=row.querySelector('.conversation-menu-panel').getBoundingClientRect();
