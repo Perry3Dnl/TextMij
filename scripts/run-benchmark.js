@@ -33,13 +33,15 @@ try {
   // Live conversation layout is also covered by the isolated browser-flow tests.
   for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }, { width: 390, height: 844 }]) {
     await page.setViewportSize(viewport);
-    await page.goto(new URL('/?preview=1#home', origin).href);
+    await page.goto(new URL('/?preview=1#gesprekken', origin).href);
+    await page.locator('.session-row').first().waitFor();
     const footer = await label.boundingBox();
     if (!footer || footer.y + footer.height > viewport.height + 1) throw new Error('Footer outside viewport');
-    if (viewport.width < 761) {
-      const nav = await page.locator('.mobile-navigation').boundingBox();
-      if (!nav || nav.y + nav.height > footer.y + 1) throw new Error('Footer overlaps mobile navigation');
-    }
+    if (await page.locator('.mobile-navigation').isVisible()) throw new Error('Old mobile navigation is still visible');
+    const lastRow = page.locator('.session-row').last();
+    await lastRow.scrollIntoViewIfNeeded();
+    const row = await lastRow.boundingBox();
+    if (!row || row.y + row.height > footer.y + 1) throw new Error('Footer overlaps the last session');
     await page.goto(new URL('/?preview=1#gesprek/studio-noord', origin).href);
     const composer = await page.locator('.composer-wrap').boundingBox();
     if (!composer || composer.y + composer.height > footer.y + 1) throw new Error('Footer overlaps chat composer');
@@ -47,3 +49,4 @@ try {
   console.log('Published result and footer checks passed');
   if (process.env.GITHUB_STEP_SUMMARY) await writeFile(process.env.GITHUB_STEP_SUMMARY, `### Browser round-trip stress test\n\n${result.completed.toLocaleString('en-US')} completed / 60 seconds, 1024 bytes each direction.\n\nSent: ${result.sent}; not returned before deadline: ${result.uncompleted}; failed requests: ${result.failedRequests}.\n\nSix increasing bursts, 10 seconds apart. Measured transport throughput, excluding chat persistence/queue. Revision: ${revision}.\n`, { flag: 'a' });
 } finally { await browser.close(); }
+
