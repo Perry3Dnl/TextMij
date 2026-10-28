@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { INDUSTRIES,industryFor,searchIndustries,quickActionsFor,messageFromAction } from '../public/business-templates.js';
+import { INDUSTRIES,industryFor,searchIndustries,quickActionsFor,messageFromAction,quickMessageCollection,addQuickMessageTemplate,validateQuickMessageCollection } from '../public/business-templates.js';
 import { contactCode } from '../public/contact-code.js';
 import { validateBusinessMessage } from '../public/model.js';
 import { qrcodegen } from '../public/vendor/qrcodegen.js';
@@ -35,4 +35,20 @@ test('real QR encoding decodes to a public contact link and rejects unrelated or
   assert.equal(contactCode('7483–rgy–rch',origin),code);
   assert.equal(contactCode('https://unrelated.invalid/#connect/'+code,origin),null);
   assert.equal(contactCode(origin+'/#connect/token-or-private-key',origin),null);
+});
+
+test('applying templates adds unique entries, preserves edits and validates private collection',()=>{
+  let items=addQuickMessageTemplate(null,null,'garage');
+  assert.equal(items.length,6);
+  items[0]={...items[0],label:'Mijn aangepaste knop'};
+  items=addQuickMessageTemplate('garage',items,'bloemist');
+  assert.equal(items.length,10);
+  assert.equal(items[0].label,'Mijn aangepaste knop');
+  items=addQuickMessageTemplate('bloemist',items,'garage');
+  assert.equal(items.length,10);
+  const saved=validateQuickMessageCollection(items);
+  assert.equal(saved.length,10);
+  assert.equal(quickMessageCollection('bloemist',saved).find(i=>i.key==='garage:approval').fields.length,2);
+  assert.throws(()=>validateQuickMessageCollection([...items,items[0]]));
+  assert.throws(()=>validateQuickMessageCollection([{key:'invalid',label:'x',title:'x',text:'x'}]));
 });
