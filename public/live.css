@@ -237,3 +237,17 @@
   .session-app .conversation-bar-action svg{width:17px;height:17px}
   .session-app .session-row .conversation-time{font-size:9px}
 }
+
+
+/* Applied quick templates are visible on the business profile editor. */
+.quick-manager-heading h2{margin:0 0 5px}
+.quick-manager-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:10px;margin-top:16px}
+.quick-manager-item,.quick-add{appearance:none;display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;min-height:78px;padding:14px;border:1px solid var(--line);border-radius:12px;background:transparent;color:inherit;cursor:pointer;text-align:left}
+.quick-manager-item:hover,.quick-add:hover{background:var(--green-light)}
+.quick-manager-item span{min-width:0;display:grid;gap:5px}
+.quick-manager-item strong{font-size:14px}
+.quick-manager-item small{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.quick-manager-item svg,.quick-add svg{flex-shrink:0}
+.quick-add{justify-content:center;border-style:dashed;color:var(--green);font-weight:600}
+.quick-add svg{width:22px;height:22px}
+#external-action-list .live-action-editor{margin:10px 0}
