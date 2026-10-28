@@ -97,7 +97,7 @@ for(const role of ['personal','business']) {
     await openMenu(bar);
     await bar.getByRole('button',{name:target+' blokkeren'}).click();
     await owner.getByRole('button',{name:'Blokkeren',exact:true}).click();
-    await expect(bar.locator('[data-action="block-chat"]')).toContainText('deblokkeren');
+    await expect(bar.locator('[data-action="block-chat"]')).toHaveAttribute('aria-label',target+' deblokkeren');
     expect(await owner.locator('.session-row').evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
     await owner.locator('.conversation-row').first().click();
     await expect(owner.locator('#reply')).toBeDisabled();
