@@ -56,7 +56,7 @@ for(const width of [320,390,1200]) {
     await expect(business.getByRole('button',{name:'Zwart (dark mode)',exact:true})).toHaveAttribute('aria-pressed','true');
     await business.getByRole('button',{name:'Instellingen sluiten'}).click();
     await expect(business.locator('.conversation-bar')).toHaveCount(1);
-    await expect(business.locator('.conversation-bar button')).toHaveCount(5);
+    await expect(business.locator('.conversation-bar .conversation-menu-action')).toHaveCount(5);
     await business.locator('.conversation-row').click();
     await expect(business.locator('#reply')).toHaveValue('Een conceptbericht');
     await business.getByRole('button',{name:'Bericht versturen'}).click();
@@ -64,6 +64,7 @@ for(const width of [320,390,1200]) {
     await expect(customer.locator('.session-row')).toHaveCount(1);
     await customer.screenshot({path:testInfo.outputPath('customer-inbox.png'),fullPage:true});
     await expect(customer.locator('.conversation-bar')).toHaveCount(1);
+    await customer.locator('.conversation-bar summary').click();
     await expect(customer.locator('.conversation-bar').getByRole('button',{name:'Bedrijf melden'})).toBeVisible();
     await expect(customer.locator('.chat-panel')).toHaveCount(0);
     await customer.locator('.conversation-row').click();

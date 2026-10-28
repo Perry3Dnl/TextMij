@@ -23,33 +23,42 @@ for(const role of ['personal','business']) {
     await owner.locator('#reply').fill('Mijn concept');
     await owner.getByRole('link',{name:'Terug naar gesprekken'}).click();
     const bar=owner.locator('.conversation-bar').first();
-    await expect(bar.getByRole('button')).toHaveCount(5);
-    // All five actions must share the conversation row, including at 320px.
-    const geometry=await owner.locator('.session-row').first().evaluate(row=>{
-      const summary=row.querySelector('.conversation-row').getBoundingClientRect();
-      const actions=[...row.querySelectorAll('.conversation-bar-action')].map(el=>el.getBoundingClientRect());
-      const bounds=row.getBoundingClientRect();
-      return {summaryTop:summary.top,summaryBottom:summary.bottom,
-        barTop:Math.min(...actions.map(a=>a.top)),barBottom:Math.max(...actions.map(a=>a.bottom)),
-        barRight:Math.max(...actions.map(a=>a.right)),rowRight:bounds.right,
-        scrollWidth:document.documentElement.scrollWidth,viewport:innerWidth};
+    await expect(bar.locator('summary')).toBeVisible();
+    await expect(bar.locator('.conversation-menu-action')).toHaveCount(5);
+    await expect(bar.locator('.conversation-menu-panel')).toBeHidden();
+    const layout=await owner.locator('.session-row').first().evaluate(row=>{
+      const chat=row.querySelector('.conversation-row').getBoundingClientRect();
+      const menu=row.querySelector('.conversation-bar>summary').getBoundingClientRect();
+      return {sameRow:chat.top<menu.bottom&&menu.top<chat.bottom,
+        fits:menu.right<=innerWidth,overflow:document.documentElement.scrollWidth>innerWidth};
     });
-    expect(geometry.barTop).toBeLessThan(geometry.summaryBottom);
-    expect(geometry.barBottom).toBeGreaterThan(geometry.summaryTop);
-    expect(geometry.barRight).toBeLessThanOrEqual(geometry.rowRight+1);
-    expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.viewport);
-
+    expect(layout.sameRow).toBe(true);
+    expect(layout.fits).toBe(true);
+    expect(layout.overflow).toBe(false);
+    await bar.locator('summary').click();
+    await expect(bar.locator('.conversation-menu-panel')).toBeVisible();
+    await expect(bar.locator('.conversation-menu-panel')).toHaveCSS('animation-name','conversation-menu-reveal');
+    await owner.locator('.sessions-header h1').click();
+    await expect(bar.locator('.conversation-menu-panel')).toBeHidden();
+    await bar.locator('summary').click();
+    await owner.keyboard.press('Escape');
+    await expect(bar.locator('.conversation-menu-panel')).toBeHidden();
+    const openMenu=async(menu=bar)=>{if(!await menu.evaluate(el=>el.open))await menu.locator('summary').click();};
+    await openMenu();
     await bar.getByRole('button',{name:'Privénotitie'}).click();
     await owner.getByLabel('Notitie bij', {exact:false}).fill(note);
     await owner.getByRole('button',{name:'Notitie opslaan'}).click();
-    await expect(bar.getByRole('button',{name:'Privénotitie'})).toHaveAttribute('data-has-note','true');
+    await expect(bar.locator('[data-action="edit-note"]')).toHaveAttribute('data-has-note','true');
+    await openMenu(bar);
     await bar.getByRole('button',{name:'Gesprek vastzetten'}).click();
-    await expect(bar.getByRole('button',{name:'Gesprek losmaken'})).toHaveAttribute('aria-pressed','true');
+    await expect(bar.locator('[data-action="pin-chat"]')).toHaveAttribute('aria-pressed','true');
     const downloading=owner.waitForEvent('download');
+    await openMenu(bar);
     await bar.getByRole('button',{name:'Chat opslaan'}).click();
     const download=await downloading;expect(download.suggestedFilename()).toMatch(/\.txt$/);
     const exported=await readFile(await download.path(),'utf8');
     expect(exported).toContain('Hallo 😀');expect(exported).toContain('Dank je');expect(exported).not.toContain('Bel vrijdag terug.');
+    await openMenu(bar);
     await bar.getByRole('button',{name:target+' melden'}).click();
     await owner.getByLabel('Belediging, intimidatie of bedreiging',{exact:true}).check();
     await owner.getByLabel('Toelichting',{exact:false}).fill('Synthetische testmelding.');
@@ -62,9 +71,10 @@ for(const role of ['personal','business']) {
     await expect(owner.getByRole('heading',{name:'Melding ontvangen'})).toBeVisible();
     expect(await(await request.get(role==='business'?'/__test/user-reports':'/__test/reports')).json()).toHaveLength(1);
     await owner.getByRole('button',{name:'Klaar'}).click();
+    await openMenu(bar);
     await bar.getByRole('button',{name:target+' blokkeren'}).click();
     await owner.getByRole('button',{name:'Blokkeren',exact:true}).click();
-    await expect(bar.getByRole('button',{name:target+' deblokkeren'})).toBeVisible();
+    await expect(bar.locator('[data-action="block-chat"]')).toContainText('deblokkeren');
     expect(await owner.locator('.session-row').evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
     await owner.locator('.conversation-row').first().click();
     await expect(owner.locator('#reply')).toBeDisabled();
@@ -73,10 +83,13 @@ for(const role of ['personal','business']) {
     await owner.getByRole('link',{name:'Terug naar gesprekken'}).click();
     await owner.reload();
     const reloaded=owner.locator('.conversation-bar').first();
+    await openMenu(reloaded);
     await reloaded.getByRole('button',{name:'Privénotitie'}).click();
     await expect(owner.getByLabel('Notitie bij',{exact:false})).toHaveValue(note);
     await owner.getByRole('button',{name:'Annuleren'}).click();
+    await openMenu(reloaded);
     await expect(reloaded.getByRole('button',{name:'Gesprek losmaken'})).toBeVisible();
+    await openMenu(reloaded);
     await reloaded.getByRole('button',{name:target+' deblokkeren'}).click();
     await owner.getByRole('button',{name:'Deblokkeren',exact:true}).click();
     await owner.locator('.conversation-row').first().click();

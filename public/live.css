@@ -296,14 +296,20 @@
 .account-closure-settings{border-color:var(--line)}
 @media(max-width:380px){.live-logo-column .logo-change-button,.live-logo-column .logo-delete-button{font-size:10px}}
 
-/* Logo edit actions: one compact overflow trigger with an animated pop-out. */
-.live-logo-column .logo-actions{position:relative;align-self:center;width:100%;display:flex;flex-direction:column;align-items:center;overflow:visible}
-.live-logo-column .logo-actions>summary{list-style:none;display:flex;align-items:center;justify-content:center;min-width:42px;min-height:36px;border:1px solid var(--line);border-radius:9px;background:var(--white);color:var(--ink);font-size:25px;line-height:1;letter-spacing:2px;cursor:pointer}
-.live-logo-column .logo-actions>summary::-webkit-details-marker{display:none}
-.live-logo-column .logo-actions>summary:hover,.live-logo-column .logo-actions>summary:focus-visible{background:var(--green-light);outline-offset:2px}
-.live-logo-column .logo-actions[open]>summary{background:var(--green-light)}
-.live-logo-column .logo-actions-panel{position:absolute;z-index:15;top:calc(100% + 5px);left:0;min-width:168px;max-width:calc(100vw - 32px);padding:7px;display:grid;gap:5px;border:1px solid var(--line);border-radius:12px;background:var(--white);box-shadow:0 12px 26px #0002;transform-origin:top left;animation:logo-actions-reveal .17s ease-out both}
-.live-logo-column .logo-actions:not([open]) .logo-actions-panel{display:none}
-.live-logo-column .logo-actions-panel .logo-change-button,.live-logo-column .logo-actions-panel .logo-delete-button{width:100%;min-height:38px;justify-content:flex-start;white-space:nowrap;padding:8px 10px;font-size:12px}
-@keyframes logo-actions-reveal{from{opacity:0;transform:translateY(-8px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
-@media(prefers-reduced-motion:reduce){.live-logo-column .logo-actions-panel{animation:none}}
+
+/* Compact conversation overflow menu. Keep row details visible on small phones. */
+.session-app .session-row {position:relative;isolation:isolate;overflow:visible}
+.session-app .session-row:has(.conversation-bar[open]){z-index:20}
+.session-app .conversation-bar{position:relative;display:block;flex-shrink:0;padding:0}
+.session-app .conversation-bar>summary{list-style:none;display:flex;align-items:center;justify-content:center;width:42px;height:42px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--ink);font-size:27px;line-height:1;letter-spacing:2px;cursor:pointer;user-select:none}
+.session-app .conversation-bar>summary::-webkit-details-marker{display:none}
+.session-app .conversation-bar>summary:hover,.session-app .conversation-bar>summary:focus-visible,.session-app .conversation-bar[open]>summary{background:var(--green-light);outline-offset:2px}
+.session-app .conversation-menu-panel{position:absolute;right:0;top:calc(100% + 4px);width:205px;max-width:calc(100vw - 20px);display:grid;gap:3px;padding:6px;background:var(--white);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 30px #0002;z-index:30;transform-origin:top right;animation:conversation-menu-reveal .17s ease-out both}
+.session-app .conversation-bar:not([open]) .conversation-menu-panel{display:none}
+.session-app .conversation-menu-action{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:8px 10px;border:0;border-radius:8px;background:transparent;color:var(--ink);font-size:13px;cursor:pointer;text-align:left}
+.session-app .conversation-menu-action:hover,.session-app .conversation-menu-action:focus-visible{background:var(--green-light)}
+.session-app .conversation-menu-action svg{width:17px;height:17px;flex-shrink:0}
+.session-app .conversation-menu-action[aria-pressed="true"],.session-app .conversation-menu-action[data-has-note="true"]{color:var(--green)}
+@keyframes conversation-menu-reveal{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(prefers-reduced-motion:reduce){.session-app .conversation-menu-panel{animation:none}}
+@media(max-width:380px){.session-app .conversation-bar>summary{width:36px;height:40px}}
