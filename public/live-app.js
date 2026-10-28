@@ -116,7 +116,7 @@ function welcome(message='') {
 function conversationBar(item) {
   const id=html(item.accountId),prefs=client.preferences(item.accountId);
   const target=item.kind==='business'?'Bedrijf':'Gebruiker';
-  const action=(symbol,title,name,extra='')=>'<button type="button" class="conversation-menu-action" data-action="'+name+'" data-id="'+id+'" '+extra+'>'+icon(symbol)+'<span>'+html(title)+'</span></button>';
+  const action=(symbol,title,name,extra='')=>'<button type="button" class="conversation-menu-action" data-action="'+name+'" data-id="'+id+'" aria-label="'+html(title)+'" title="'+html(title)+'" '+extra+'>'+icon(symbol)+'</button>';
   return '<details class="conversation-bar" aria-label="Gespreksopties voor '+html(label(item))+'"><summary aria-label="Meer opties voor '+html(label(item))+'" title="Meer opties">⋯</summary><div class="conversation-menu-panel" role="group" aria-label="Gespreksacties">'+
     action('pin',prefs.pinned?'Gesprek losmaken':'Gesprek vastzetten','pin-chat','aria-pressed="'+Boolean(prefs.pinned)+'"')+
     action('download','Chat opslaan','export-chat')+
@@ -354,6 +354,9 @@ document.addEventListener('click',async event=>{
   }
   const el=event.target.closest('[data-action]');if(!el||el.disabled)return;
   const action=el.dataset.action;
+  // Dismiss the inline action strip after selecting an option.
+  const conversationMenu=el.closest('.conversation-bar[open]');
+  if(conversationMenu)conversationMenu.open=false;
   try {
     if(action==='start-personal'){el.disabled=true;await client.register('personal','');render();}
     else if(action==='settings')settings(el.dataset.id);
