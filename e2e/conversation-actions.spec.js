@@ -46,6 +46,7 @@ for(const role of ['personal','business']) {
       const panel=row.querySelector('.conversation-menu-panel').getBoundingClientRect();
       return panel.right<=trigger.left+1;
     })).toBe(true);
+    await expect.poll(()=>bar.locator('.conversation-menu-panel').evaluate(el=>el.getBoundingClientRect().width)).toBeGreaterThan(150);
     const inline=await owner.locator('.session-row').first().evaluate(row=>{
       const summary=row.querySelector('.conversation-bar>summary').getBoundingClientRect();
       const panel=row.querySelector('.conversation-menu-panel').getBoundingClientRect();
