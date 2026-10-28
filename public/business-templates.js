@@ -143,6 +143,53 @@ export function quickActionsFor(industryId) {
   ];
 }
 
+
+/**
+ * A business owns a collection of quick messages. Applying another industry
+ * adds missing messages without discarding earlier edits or custom entries.
+ * Kept private in the business profile, never exposed in contact responses.
+ */
+export function quickMessageCollection(industryId, saved) {
+  if (Array.isArray(saved)) return saved.map(item => {
+    const [source,id]=item.key.split(':');
+    const original=quickActionsFor(source).find(action=>action.id===id);
+    return {...item,fields:(original?.fields||[]).filter(field=>item.text.includes('{'+field.name+'}'))};
+  });
+  return quickActionsFor(industryId).map(item=>({...item,key:industryId+':'+item.id}));
+}
+export function addQuickMessageTemplate(industryId, saved, sourceId) {
+  const existing=quickMessageCollection(industryId,saved);
+  const keys=new Set(existing.map(item=>item.key));
+  const added=quickActionsFor(sourceId).filter(item=>!keys.has(sourceId+':'+item.id)).map(item=>({...item,key:sourceId+':'+item.id}));
+  if(!industryFor(sourceId))throw new TypeError('Onbekend bedrijfstemplate.');
+  if(existing.length+added.length>48)throw new TypeError('Je kunt maximaal 48 snelberichten opslaan.');
+  return [...existing,...added];
+}
+export function validateQuickMessageCollection(saved) {
+  if(saved===undefined||saved===null)return null;
+  if(!Array.isArray(saved)||saved.length>48)throw new TypeError('Ongeldige lijst van snelberichten.');
+  const result=[],keys=new Set();
+  for(const item of saved) {
+    if(!item||typeof item!=='object'||Array.isArray(item)||typeof item.key!=='string'||
+      !/^(?:[a-z0-9-]+:[a-z0-9-]+|custom:[a-f0-9-]{36})$/.test(item.key)||keys.has(item.key))
+      throw new TypeError('Ongeldige of dubbele snelkeuze.');
+    const [source,id]=item.key.split(':');
+    if(source!=='custom'&&!quickActionsFor(source).some(action=>action.id===id))
+      throw new TypeError('Onbekende snelkeuze.');
+    const value={key:item.key};
+    for(const [property,max] of [['label',35],['title',150],['text',1024]]) {
+      if(typeof item[property]!=='string'||!item[property].trim()||Array.from(item[property].trim()).length>max)
+        throw new TypeError('Vul een geldige knopnaam, titel en berichttekst in.');
+      value[property]=item[property].trim();
+    }
+    if(byteLength(value.title)+byteLength(value.text)>1024)
+      throw new TypeError('Titel en bericht mogen samen maximaal 1024 bytes zijn.');
+    if(validateBusinessMessage(value.title,value.text))throw new TypeError('Ongeldig snelbericht.');
+    keys.add(item.key);result.push(value);
+  }
+  return result;
+}
+
 export function messageFromAction(action, values = {}) {
   if (!action || typeof action.text !== 'string') throw new TypeError('Unknown action');
   let text = action.text;
