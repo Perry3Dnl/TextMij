@@ -34,7 +34,7 @@
 .live-brand-editor>div { display:grid;gap:8px; }
 .live-logo-editor { position:relative;display:flex;aspect-ratio:1;flex-direction:column;justify-content:center;align-items:center;border:1px dashed var(--line);border-radius:20px;background:var(--white);cursor:pointer;overflow:hidden; }
 .live-logo-editor .avatar { width:100%;height:100%;border-radius:0;object-fit:cover; }
-.live-logo-editor>span:last-of-type { position:absolute;bottom:8px;left:8px;right:8px;display:flex;align-items:center;justify-content:center;gap:5px;background:#fffffff2;color:#263326;border-radius:8px;padding:8px 4px;font-size:11px; }
+.live-logo-editor .avatar { position:static; }
 .live-logo-editor:focus-within { outline:3px solid var(--green);outline-offset:3px; }
 .live-action-editor { padding:12px 0;border-top:1px solid var(--line); }
 .live-action-editor .text-input { margin:6px 0 10px; }
@@ -62,7 +62,7 @@
   .live-device-code { font-size:clamp(21px,6.3vw,32px);gap:10px; }
   .live-device-code svg { width:20px; }
   .live-brand-editor { grid-template-columns:96px minmax(0,1fr);gap:15px; }
-  .live-logo-editor>span:last-of-type { font-size:9px;padding:6px 2px;gap:3px; }
+
   .live-logo-editor svg { width:12px; }
   .quick-tool-buttons { flex-wrap:nowrap;overflow:auto;padding-bottom:3px; }
   .quick-tool-buttons .button { flex-shrink:0; }
@@ -284,3 +284,14 @@
     gap:10px;
   }
 }
+
+/* Keep logo preview unobstructed and place controls immediately below it. */
+.live-logo-column{display:flex;flex-direction:column;align-items:stretch;gap:8px;min-width:0}
+.live-logo-column .live-logo-editor{width:100%;aspect-ratio:1}
+.live-logo-column .logo-change-button,.live-logo-column .logo-delete-button{width:100%;min-height:35px;display:flex;gap:5px;align-items:center;justify-content:center;padding:7px 4px;font-size:11px;line-height:1.25;cursor:pointer;text-align:center}
+.live-logo-column .logo-delete-button[hidden]{display:none}
+.live-logo-column .logo-change-button svg,.live-logo-column .logo-delete-button svg{width:13px;height:13px;flex-shrink:0}
+.business-closed-notice{padding:15px;border:1px solid var(--line);background:var(--green-light);border-radius:12px}
+.business-closed-notice p{margin:6px 0 0;font-size:13px}
+.account-closure-settings{border-color:var(--line)}
+@media(max-width:380px){.live-logo-column .logo-change-button,.live-logo-column .logo-delete-button{font-size:10px}}

@@ -178,7 +178,7 @@ function chat(id) {
 }
 function composer() {
   const form=document.querySelector('#reply-form');if(!form)return;
-  const blocked=Boolean(contact(form.dataset.id)?.messagingBlocked);
+  const blocked=Boolean(contact(form.dataset.id)?.messagingBlocked || (business()?client.account.closedAt:contact(form.dataset.id)?.closedAt));
   form.elements.text.disabled=blocked;
   const notice=document.querySelector('#conversation-block-notice');if(notice)notice.hidden=!blocked;
   document.querySelectorAll('[data-action="quick-message"]').forEach(el=>el.disabled=blocked||sending);
@@ -190,11 +190,11 @@ function profile(id) {
   const own=business()&&id===client.account.accountId,item=own?client.account:contact(id);
   if(!item||item.kind!=='business'){main.innerHTML=header('Bedrijf niet gevonden','Open het bedrijf vanuit je gesprek.');return;}
   const p=cleanBusinessProfile(item.profile);
-  if(own&&editing){profileEditor(item,p);return;}
+  if(own&&editing&&!item.closedAt){profileEditor(item,p);return;}
   const external=(title,url)=>url?'<a class="button secondary" href="'+html(url)+'" target="_blank" rel="noopener noreferrer">'+html(title)+' ↗</a>':'';
   main.innerHTML='<section class="company-profile"><div class="company-profile-toolbar"><a class="text-link" href="'+(own?'#gesprekken':'#gesprek/'+id)+'">← Terug</a>'+
-    (own?button('Profiel bewerken','edit-profile'):button(icon('flag')+' Bedrijf melden','report','data-id="'+id+'"',true))+'</div><div class="company-profile-hero">'+avatar(item,'company-logo-fallback')+
-    '<div><h1>'+html(item.name)+'</h1><p>'+html(p.description||'Welkom bij ons bedrijfsprofiel.')+'</p></div></div>'+
+    (own&&!item.closedAt?button('Profiel bewerken','edit-profile'):!own?button(icon('flag')+' Bedrijf melden','report','data-id="'+id+'"',true):'')+'</div><div class="company-profile-hero">'+avatar(item,'company-logo-fallback')+
+    '<div><h1>'+html(item.name)+'</h1><p>'+html(p.description||'Welkom bij ons bedrijfsprofiel.')+'</p></div></div>'+ (item.closedAt?'<div class="business-closed-notice" role="status"><strong>Dit bedrijf heeft zijn account gesloten.</strong><p>Het profiel blijft tot 90 dagen na de sluiting beschikbaar, maar berichten versturen is niet meer mogelijk.</p></div>':'')+
     (p.phone||p.website||Object.values(p.socials).some(Boolean)?'<section class="card company-profile-section"><h2>Contact</h2>'+(p.phone?'<p><a href="tel:'+html(p.phone.replace(/[^+0-9]/g,''))+'">'+html(p.phone)+'</a></p>':'')+'<div class="company-actions">'+external('Website',p.website)+Object.entries(p.socials).map(([name,url])=>external(name,url)).join('')+'</div></section>':'')+
     (Object.values(p.hours).some(Boolean)?'<section class="card company-profile-section"><h2>Openingstijden</h2>'+PROFILE_DAYS.map(day=>p.hours[day]?'<div class="company-hour"><strong>'+day+'</strong><span>'+html(p.hours[day])+'</span></div>':'').join('')+'</section>':'')+
     (p.actions.length?'<section class="card company-profile-section"><h2>Wat wil je doen?</h2><div class="company-actions">'+p.actions.map(action=>external(action.label,action.url)).join('')+'</div></section>':'')+(own?'':'<div id="reputation-panel">'+reputationMarkup(id)+'</div>')+'</section>';
@@ -234,8 +234,8 @@ function editQuickMessage(key) {
 function profileEditor(item,p) {
   logoDraft=p.logo;
   main.innerHTML='<div class="company-profile-toolbar"><h1>Je bedrijfsprofiel</h1>'+button('Annuleren','cancel-edit','',true)+'</div><form id="company-profile-form" class="company-profile-form"><section class="card company-editor-panel">'+
-    '<div class="live-brand-editor"><label class="live-logo-editor" for="company-logo">'+avatar(item,'company-logo-fallback')+'<span>'+icon('edit')+' Logo wijzigen</span><input id="company-logo" type="file" accept="image/*" class="sr-only"></label><div>'+field('company-name','Bedrijfsnaam',item.name,'text','maxlength="80" required')+
-    '<label class="field-label" for="company-description">Beschrijving</label><textarea class="text-input" id="company-description" name="description" rows="4" maxlength="500">'+html(p.description)+'</textarea></div></div><p class="field-help" id="logo-feedback">Afbeeldingen worden vierkant uitgesneden en verkleind tot maximaal 100 KB</p>'+button('Logo verwijderen','remove-logo','',true)+'</section>'+
+    '<div class="live-brand-editor"><div class="live-logo-column"><label class="live-logo-editor" for="company-logo">'+avatar(item,'company-logo-fallback')+'<input id="company-logo" type="file" accept="image/*" class="sr-only"></label><label class="button secondary logo-change-button" for="company-logo">'+icon('edit')+' Logo wijzigen</label><button type="button" class="button secondary logo-delete-button" data-action="remove-logo" '+(logoDraft?'':'hidden')+'>'+icon('trash-2')+' Verwijderen</button></div><div>'+field('company-name','Bedrijfsnaam',item.name,'text','maxlength="80" required')+
+    '<label class="field-label" for="company-description">Beschrijving</label><textarea class="text-input" id="company-description" name="description" rows="4" maxlength="500">'+html(p.description)+'</textarea></div></div><p class="field-help" id="logo-feedback">Afbeeldingen worden vierkant uitgesneden en verkleind tot maximaal 100 KB</p>'+'</section>'+
     '<details class="card company-editor-panel"><summary>Contactgegevens</summary>'+field('company-phone','Telefoonnummer (optioneel)',p.phone)+field('company-website','Website (optioneel)',p.website,'url')+
     ['instagram','facebook','linkedin'].map(key=>field('social-'+key,key,p.socials[key],'url')).join('')+'</details>'+
     '<details class="card company-editor-panel"><summary>Openingstijden</summary><div class="company-hour-fields">'+PROFILE_DAYS.map(day=>'<div>'+field('hours-'+day,day,p.hours[day])+'</div>').join('')+'</div></details>'+
@@ -258,6 +258,7 @@ function settings(id) {
     '<section class="card settings-card"><h2>Hoe wil je genoemd worden?</h2><p>Een bijnaam is genoeg. Dit is optioneel.</p><form id="personal-profile">'+field('personal-name','Naam of bijnaam',a.name==='Conappt-gebruiker'?'':a.name,'text','maxlength="80"')+'<button class="button" type="submit">Opslaan</button>'+errorLine+'</form></section>')+
     (business()?'<section class="card settings-card"><h2>Bedrijfsthema</h2><p>Ook je klanten zien dit thema in hun gesprek met jou.</p><div class="theme-options">'+Object.entries(BUSINESS_THEMES).map(([key,value])=>button(html(value.label),'theme','data-id="'+key+'" aria-pressed="'+(a.theme===key)+'"',a.theme!==key)).join('')+'</div>'+
     (a.theme==='custom'?'<form id="custom-theme" class="theme-custom-fields">'+[['accent','Accent'],['tint','Berichtachtergrond'],['ink','Berichttekst'],['background','Achtergrond'],['foreground','Tekst']].map(([key,title])=>field(key,title,a.customTheme?.[key]||BUSINESS_THEMES.white[key],'color')).join('')+'<button class="button" type="submit">Thema opslaan</button>'+errorLine+'</form>':'')+'</section>':'')+
+    (business()?'<section class="card settings-card account-closure-settings"><h2>Bedrijfsaccount sluiten</h2>'+(a.closedAt?'<p>Dit bedrijfsaccount is gesloten. Het profiel blijft nog maximaal 90 dagen zichtbaar.</p>':'<p>Sluiten stopt direct nieuwe berichten en verbindingen. Bestaande contacten kunnen het profiel nog 90 dagen bekijken.</p>'+button('Bedrijfsaccount sluiten','close-business-dialog','',true))+'</section>':'')+
     '<section class="card settings-card"><h2>Dit apparaat</h2><p>Conappt ververst je gesprekken zolang de app openstaat. Achtergrondmeldingen en het overzetten naar een ander apparaat zijn nog niet beschikbaar.</p>'+button('Wissel van profiel','switch-account','',true)+'</section>';
   showSettings(content);
 }
@@ -434,9 +435,21 @@ document.addEventListener('click',async event=>{
       if(panel&&route().id===id)panel.innerHTML=reputationMarkup(id);
       toast('Beoordeling opgeslagen.');
     }
-    else if(action==='edit-profile'){editing=true;go('bedrijf/'+client.account.accountId);render();}
+    else if(action==='edit-profile'){if(client.account.closedAt)return;editing=true;go('bedrijf/'+client.account.accountId);render();}
     else if(action==='cancel-edit'){editing=false;render();}
-    else if(action==='remove-logo'){logoDraft='';document.querySelector('#logo-feedback').textContent='Logo wordt verwijderd zodra je opslaat.';document.querySelector('.live-logo-editor .avatar')?.remove();}
+    else if(action==='remove-logo'){
+      logoDraft='';
+      const preview=document.querySelector('.live-logo-editor');
+      preview.querySelector('.avatar')?.remove();
+      const initials=document.createElement('span');initials.className='avatar company-logo-fallback';initials.textContent=(client.account.name||'B').charAt(0).toUpperCase();preview.prepend(initials);
+      document.querySelector('.logo-delete-button').hidden=true;
+      document.querySelector('#logo-feedback').textContent='Logo wordt verwijderd zodra je opslaat.';
+    }
+    else if(action==='close-business-dialog'){
+      if(!business()||client.account.closedAt)return;
+      closeSettings();
+      openDialog('<h2>Bedrijfsaccount sluiten?</h2><p>Je kunt dan geen nieuwe berichten meer versturen of klanten verbinden. Het bedrijfsprofiel blijft nog 90 dagen zichtbaar en krijgt de melding dat het bedrijf zijn account heeft gesloten.</p><form id="close-business-form"><label class="field-label" for="close-confirm">Typ SLUITEN om te bevestigen</label><input class="text-input" id="close-confirm" name="confirm" autocomplete="off" required>'+errorLine+'<div class="dialog-actions">'+button('Annuleren','close-dialog','',true)+'<button class="button" type="submit">Account definitief sluiten</button></div></form>');
+    }
     else if(action==='theme') {
       await client.update({theme:el.dataset.id,...(el.dataset.id==='custom'?{customTheme:client.account.customTheme||{accent:'#42633b',tint:'#e9f1e5',ink:'#304b2b',background:'#ffffff',foreground:'#263326'}}:{})});
       render();if(settingsDialog.open)settings(settingsContactId);toast('Bedrijfsthema opgeslagen.');
@@ -464,19 +477,25 @@ document.addEventListener('change',async event=>{
     const element=document.querySelector('.live-logo-editor');
     element.querySelector('.avatar')?.remove();
     const image=document.createElement('img');image.className='avatar company-logo-fallback';image.src=logoDraft;image.alt='';element.prepend(image);
+    document.querySelector('.logo-delete-button').hidden=false;
     document.querySelector('#logo-feedback').textContent='Logo gekozen. Sla je profiel op om het te publiceren.';
   } catch(error){document.querySelector('#logo-feedback').textContent=error.message;}
 });
 document.addEventListener('submit',async event=>{
   const form=event.target;
-  if(!['signup-business','connect-form','reply-form','quick-action-form','report-form','company-profile-form','personal-profile','custom-theme','conversation-note-form','quick-message-editor'].includes(form.id))return;
+  if(!['signup-business','connect-form','reply-form','quick-action-form','report-form','company-profile-form','personal-profile','custom-theme','conversation-note-form','quick-message-editor','close-business-form'].includes(form.id))return;
   event.preventDefault();
   if(form.dataset.submitting==='true')return;
   form.dataset.submitting='true';
   const submit=form.querySelector('[type="submit"]');submit.disabled=true;
   try {
     const data=new FormData(form);
-    if(form.id==='quick-message-editor') {
+    if(form.id==='close-business-form'){
+      if(data.get('confirm')!=='SLUITEN')throw new Error('Typ SLUITEN om te bevestigen.');
+      const result=await client.request('business-closure',{method:'POST',body:{confirm:'SLUITEN'}});
+      client.account=result;client.profiles.business=result;
+      dialog.close();editing=false;render();toast('Dit bedrijfsaccount is gesloten.');
+    } else if(form.id==='quick-message-editor') {
       const key=form.dataset.key||'custom:'+crypto.randomUUID();
       const entry={key,label:data.get('quick-label'),title:data.get('quick-title'),text:data.get('text')};
       const quickMessages=quickActions().filter(q=>q.key!==key).map(({key,label,title,text})=>({key,label,title,text}));

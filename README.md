@@ -2,7 +2,10 @@
 
 Conappt is a hosted business-to-customer messaging service. Customers receive a contact code without a phone number or email address. A business enters its company name, connects a customer, and sends updates from the app or its own software.
 
-## Current release: 0.18.0
+## Current release: 0.19.0
+
+- Businesses can close their account with explicit typed confirmation. Closing stops new messages and connections, cancels queued messages and makes the profile read-only. Existing contacts see a closure notice for 90 days; public profile resolution ends after the 90-day cutoff. Closed business data is retained internally pending any separate retention/deletion policy.
+- The logo change button sits below the preview; remove is displayed only when a logo is selected.
 
 - Business quick messages are collected additively from industry templates: applying another template retains existing messages and edits. The business profile editor lists all saved messages, supports editing/removal and a + button for custom messages; empty external actions show a + instead of pre-rendered blank fields. Quick messages are private to the owning business and persist on the server.
 

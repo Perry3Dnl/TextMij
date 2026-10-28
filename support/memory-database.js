@@ -19,8 +19,12 @@ export function memoryDatabase() {
       const index=db.blocks.findIndex(b=>b.blocker_id===args[0]&&b.blocked_id===args[1]);
       if(index>=0)db.blocks.splice(index,1);return [{affectedRows:index>=0?1:0}];
     }
-    if(query.startsWith("UPDATE encrypted_messages SET status = 'failed'")) {
+    if(query.startsWith("UPDATE encrypted_messages SET status = 'failed'") && query.includes('sender_business_id = ? AND recipient_device_id = ?')) {
       for(const m of db.messages)if(m.status==='queued'&&((m.sender_business_id===args[0]&&m.recipient_device_id===args[1])||(m.sender_business_id===args[2]&&m.recipient_device_id===args[3])))m.status='failed';
+      return [{affectedRows:1}];
+    }
+    if(query.startsWith("UPDATE encrypted_messages SET status = 'failed'") && query.includes('sender_business_id = ? OR recipient_device_id = ?')){
+      for(const m of db.messages)if(m.status==='queued'&&(m.sender_business_id===args[0]||m.recipient_device_id===args[1]))m.status='failed';
       return [{affectedRows:1}];
     }
     if(query.startsWith('INSERT INTO accounts')) {
@@ -34,6 +38,13 @@ export function memoryDatabase() {
     if(query.startsWith('SELECT a.*,')&&query.includes('FROM accounts a LEFT JOIN'))return [db.accounts.filter(a=>a.id===args[0]).map(merged)];
     if(query.startsWith('SELECT id,kind FROM accounts WHERE public_code'))return [db.accounts.filter(a=>a.public_code===args[0])];
     if(query.startsWith('SELECT id FROM accounts'))return [db.accounts.filter(a=>a.id===args[0]).map(a=>({id:a.id}))];
+    if(query.startsWith('SELECT profile_json FROM business_profiles WHERE account_id'))return [db.profiles.filter(p=>p.account_id===args[0]).map(p=>({profile_json:p.profile_json}))];
+    if(query.startsWith('INSERT INTO business_profiles')&&query.includes("JSON_SET")){
+      const [account_id,profile_json]=args;const existing=db.profiles.find(p=>p.account_id===account_id);
+      if(existing){const profile=JSON.parse(existing.profile_json||'{}');if(!profile.closedAt){profile.closedAt=JSON.parse(profile_json).closedAt;existing.profile_json=JSON.stringify(profile);}}
+      else db.profiles.push({account_id,industry_id:null,profile_json});
+      return [{affectedRows:1}];
+    }
     if(query.startsWith('INSERT INTO business_profiles')) {
       const [account_id,industry_id,profile_json]=args;
       const existing=db.profiles.find(p=>p.account_id===account_id);

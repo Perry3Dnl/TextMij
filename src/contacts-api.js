@@ -1,4 +1,5 @@
 import { lockConversation } from './conversation-blocks.js';
+import {parseClosure,expiredClosure,assertOpenBusiness} from './business-closure.js';
 import { httpError, readJson, responseJson } from './http-json.js';
 import { cleanBusinessProfile, BUSINESS_THEMES, validThemeColors } from '../public/model.js';
 import { industryFor,validateQuickMessageCollection } from '../public/business-templates.js';
@@ -16,6 +17,7 @@ export function publicAccount(row) {
   if (row.kind === 'business') {
     const profile = parseProfile(row.profile_json);
     result.profile = cleanBusinessProfile(profile);
+    result.closedAt=parseClosure(profile);
     result.theme = Object.hasOwn(BUSINESS_THEMES, profile.theme) ? profile.theme : 'white';
     result.customTheme = validThemeColors(profile.customTheme) ? profile.customTheme : null;
     result.industryId = industryFor(row.industry_id)?.id || null;
@@ -34,13 +36,34 @@ export class ContactsApi {
       [id]);
     if (!rows.length) throw httpError(404, 'Account not found');
     const result=publicAccount(rows[0]);
+    if(result.kind==='business'&&expiredClosure(result.closedAt)&&!includePrivate)throw httpError(404,'Bedrijfsprofiel niet meer beschikbaar.');
     if(includePrivate&&result.kind==='business')result.quickMessages=validateQuickMessageCollection(parseProfile(rows[0].profile_json).quickMessages);
     return result;
   }
   async handle(request, response, path) {
-    if (!['/api/v1/session', '/api/v1/profile', '/api/v1/connections', '/api/v1/conversation-block'].includes(path)) return false;
+    if (!['/api/v1/session', '/api/v1/profile', '/api/v1/connections', '/api/v1/conversation-block','/api/v1/business-closure'].includes(path)) return false;
     const account = await this.authenticate(request);
-    if(path === '/api/v1/conversation-block' && request.method === 'PUT') {
+    if(path === '/api/v1/business-closure' && request.method === 'POST'){
+      if(account.kind!=='business')throw httpError(403,'Alleen bedrijven kunnen hun account sluiten.');
+      const input=await readJson(request);
+      if(input.confirm!=='SLUITEN')throw httpError(400,'Typ SLUITEN om de sluiting te bevestigen.');
+      const closedAt=new Date().toISOString();
+      const connection=await this.pool.getConnection();
+      try{
+        await connection.beginTransaction();
+        // Serialize closure against sends, which lock both account rows.
+        await connection.execute('SELECT id FROM accounts WHERE id = ? FOR UPDATE',[account.id]);
+        await connection.execute(
+          "INSERT INTO business_profiles (account_id,industry_id,profile_json) VALUES (?,NULL,?) ON DUPLICATE KEY UPDATE profile_json = IF(JSON_EXTRACT(profile_json,'$.closedAt') IS NULL,JSON_SET(COALESCE(profile_json,'{}'),'$.closedAt',?),profile_json)",
+          [account.id,JSON.stringify({closedAt}),closedAt]);
+        await connection.execute(
+          "UPDATE encrypted_messages SET status = 'failed' WHERE status = 'queued' AND (sender_business_id = ? OR recipient_device_id = ?)",
+          [account.id,account.id]);
+        await connection.commit();
+      }catch(e){await connection.rollback();throw e;}
+      finally{connection.release();}
+      responseJson(response,200,await this.account(account.id,true));
+    } else if(path === '/api/v1/conversation-block' && request.method === 'PUT') {
       const input=await readJson(request);
       if(!/^[a-f0-9]{64}$/.test(input.contactId||'')||input.contactId===account.id||typeof input.blocked!=='boolean')
         throw httpError(400,'Invalid conversation block');
@@ -67,6 +90,7 @@ export class ContactsApi {
       if (typeof input.name !== 'string' || !input.name.trim() || Array.from(input.name.trim()).length > 80)
         throw httpError(400, 'Display name required (maximum 80 characters)');
       if (account.kind === 'business') {
+        await assertOpenBusiness(this.pool,account.id);
         if (input.industryId !== null && input.industryId !== undefined && !industryFor(input.industryId))
           throw httpError(400, 'Unknown business template');
         const profile = cleanBusinessProfile(input.profile);
@@ -83,6 +107,7 @@ export class ContactsApi {
       responseJson(response, 200, await this.account(account.id,true));
     } else if (path === '/api/v1/connections' && request.method === 'POST') {
       if (account.kind !== 'business') throw httpError(403, 'Only businesses can connect a customer');
+      await assertOpenBusiness(this.pool,account.id);
       const input = await readJson(request);
       const code = typeof input.code === 'string' ? input.code.trim().toUpperCase() : '';
       if (!/^[0-9]{4}-[A-Z]{3}-[A-Z]{3}$/.test(code)) throw httpError(400, 'Invalid customer code');
@@ -110,7 +135,7 @@ export class ContactsApi {
         blocked:blocks.some(b=>b.blocker_id===account.id&&b.blocked_id===String(row.id)),
         messagingBlocked:blocks.some(b=>(b.blocker_id===account.id&&b.blocked_id===String(row.id))||(b.blocked_id===account.id&&b.blocker_id===String(row.id))),
         ...(business && row.customer_alias ? { alias: row.customer_alias } : {}),
-      })) });
+      })).filter(item=>item.kind!=='business'||!expiredClosure(item.closedAt)) });
     } else {
       responseJson(response, 405, { error: 'Method not allowed' });
     }
