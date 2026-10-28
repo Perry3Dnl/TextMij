@@ -51,7 +51,7 @@ networks:
 YAML
 docker network create textmij-ci-messaging-proxy >/dev/null
 "${db[@]}" up -d --wait --wait-timeout 180
-for sql in deploy/sql/00{1,2,3,4,5,6,7}_*.sql; do
+for sql in deploy/sql/00{1,2,3,4,5,6,7,8}_*.sql; do
   # shellcheck disable=SC2016 # Expand inside the isolated test MySQL container.
   "${db[@]}" exec -T mysql sh -c 'MYSQL_PWD="$(cat /run/secrets/mysql_root_password)" exec mysql -uroot textmij' < "$sql"
 done

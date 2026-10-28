@@ -1,6 +1,6 @@
 {
   "name": "textmij",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "private": true,
   "type": "module",
   "description": "Free business-to-customer messaging through a REST API and a lightweight client.",
@@ -14,7 +14,7 @@
     "dev": "node --watch --watch-path=src --watch-path=public src/server.js",
     "start": "node src/server.js",
     "test": "node --test",
-    "check": "node --check src/server.js && node --check src/app.js && node --check public/app.js && node --check public/model.js && node --check src/message-queue.js && node --check src/encrypted-envelope.js && node --check src/account-identity.js && node --check public/crypto.js && node --check src/encrypted-outbox.js && node --check src/durable-dispatcher.js && node --check src/messaging-api.js && node --check public/bootstrap.js && node --check public/conversation-actions.js && node --check src/conversation-blocks.js && node --check public/session-ui.js && node --check public/live-app.js && node --check public/logo.js && node --check public/client.js && node --check public/device-store.js && node --check public/qr.js && node --check public/business-templates.js && node --check public/contact-code.js && node --check public/report-options.js && node --check src/contacts-api.js && node --check src/http-json.js && node --check src/reports-api.js && node --check src/benchmark.js && node --check public/benchmark.js && node --check scripts/run-benchmark.js",
+    "check": "node --check src/server.js && node --check src/app.js && node --check public/app.js && node --check public/model.js && node --check src/message-queue.js && node --check src/encrypted-envelope.js && node --check src/account-identity.js && node --check public/crypto.js && node --check src/encrypted-outbox.js && node --check src/durable-dispatcher.js && node --check src/messaging-api.js && node --check public/bootstrap.js && node --check public/conversation-actions.js && node --check src/conversation-blocks.js && node --check public/session-ui.js && node --check public/live-app.js && node --check public/logo.js && node --check public/client.js && node --check public/device-store.js && node --check public/qr.js && node --check public/business-templates.js && node --check public/contact-code.js && node --check public/report-options.js && node --check src/contacts-api.js && node --check src/http-json.js && node --check src/reports-api.js && node --check src/reputation-api.js && node --check src/benchmark.js && node --check public/benchmark.js && node --check scripts/run-benchmark.js",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

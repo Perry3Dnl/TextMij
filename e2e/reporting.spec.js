@@ -66,6 +66,12 @@ test('two devices connect by a real QR scan, exchange messages, and report priva
   await customer.getByRole('button',{name:'Klaar',exact:true}).click();
   await customer.reload();
   await expect(customer.getByRole('heading',{name:'Garage Testbedrijf',exact:true})).toBeVisible();
+  await expect(customer.locator('#reputation-panel')).toContainText('1 meldingen');
+  await customer.getByRole('button',{name:'5 sterren geven'}).click();
+  await expect(customer.locator('#reputation-panel')).toContainText('5.0 / 5');
+  await customer.getByRole('button',{name:'3 sterren geven'}).click();
+  await expect(customer.locator('#reputation-panel')).toContainText('3.0 / 5 (1 beoordelingen)');
+
   await business.reload();
   await expect(business.locator('#message-thread')).toContainText('Dank je, ik kom vanmiddag langs.');
   expect(errors).toEqual([]);

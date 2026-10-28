@@ -1,6 +1,6 @@
 // Browser/HTTP test adapter. Real MySQL schema and transactions are separately exercised in Docker CI.
 export function memoryDatabase() {
-  const db={accounts:[],profiles:[],connections:[],messages:[],reports:[],userReports:[],blocks:[],failReportInsert:false};
+  const db={accounts:[],profiles:[],connections:[],messages:[],reports:[],userReports:[],blocks:[],ratings:[],failReportInsert:false};
   let lock=Promise.resolve();
   db.query=async()=>[[{ready:1}]];
   db.execute=async(sql,args=[])=>{
@@ -69,13 +69,30 @@ export function memoryDatabase() {
       const user=query.includes('FROM user_reports');
       return [(user?db.userReports:db.reports).filter(r=>r.reporter_id===args[0]&&r.request_id===args[1]).map(r=>({...r,target_id:user?r.user_id:r.business_id}))];
     }
-    if(query.startsWith('SELECT COUNT(*) AS total FROM business_reports')||query.startsWith('SELECT COUNT(*) AS total FROM user_reports'))return [[{total:(query.includes('user_reports')?db.userReports:db.reports).filter(r=>r.reporter_id===args[0]&&r.created_at>Date.now()-86400000).length}]];
+    if((query.startsWith('SELECT COUNT(*) AS total FROM business_reports')||query.startsWith('SELECT COUNT(*) AS total FROM user_reports')) && query.includes('reporter_id'))return [[{total:(query.includes('user_reports')?db.userReports:db.reports).filter(r=>r.reporter_id===args[0]&&r.created_at>Date.now()-86400000).length}]];
     if(query.startsWith('INSERT INTO business_reports')||query.startsWith('INSERT INTO user_reports')) {
       if(db.failReportInsert)throw new Error('Synthetic database failure');
       const [id,reporter_id,business_id,request_id,business_name,reason,details]=args;
       const user=query.startsWith('INSERT INTO user_reports');
       (user?db.userReports:db.reports).push({id,reporter_id,...(user?{user_id:business_id,user_name:business_name}:{business_id,business_name}),request_id,reason,details,status:'open',created_at:new Date()});
       return [{affectedRows:1}];
+    }
+    if(query.startsWith('INSERT INTO business_ratings')) {
+      const [business_id,rater_id,stars]=args;
+      const existing=db.ratings.find(r=>r.business_id===business_id&&r.rater_id===rater_id);
+      if(existing)existing.stars=stars;else db.ratings.push({business_id,rater_id,stars});
+      return [{affectedRows:1}];
+    }
+    if(query.startsWith('SELECT COUNT(*) AS total, AVG(stars)')) {
+      const rows=db.ratings.filter(r=>r.business_id===args[0]);
+      return [[{total:rows.length,average:rows.length?rows.reduce((s,r)=>s+r.stars,0)/rows.length:null}]];
+    }
+    if(query.startsWith('SELECT stars FROM business_ratings'))return [db.ratings.filter(r=>r.business_id===args[0]&&r.rater_id===args[1]).map(r=>({stars:r.stars}))];
+    if(query.startsWith('SELECT COUNT(*) AS total FROM business_reports WHERE business_id'))return [[{total:db.reports.filter(r=>r.business_id===args[0]).length}]];
+    if(query.startsWith('SELECT reason,COUNT(*) AS total FROM business_reports')) {
+      const totals=new Map();
+      for(const r of db.reports.filter(r=>r.business_id===args[0]))totals.set(r.reason,(totals.get(r.reason)||0)+1);
+      return [[...totals].map(([reason,total])=>({reason,total}))];
     }
     if(query.startsWith('INSERT INTO encrypted_messages')) {
       const [idempotency_key,payload_hash,sender_business_id,recipient_device_id,message_type,ciphertext,nonce,image_ciphertext,image_nonce,wrapped_key,key_version,tier_at_acceptance]=args;
@@ -94,7 +111,7 @@ export function memoryDatabase() {
       execute:db.execute,
       async beginTransaction() {
         const previous=lock;lock=new Promise(resolve=>{unlock=resolve;});await previous;
-        backup=Object.fromEntries(['reports','userReports','blocks','messages'].map(key=>[key,db[key].map(item=>({...item}))]));
+        backup=Object.fromEntries(['reports','userReports','blocks','messages','ratings'].map(key=>[key,db[key].map(item=>({...item}))]));
       },
       async commit(){unlock?.();unlock=null;},
       async rollback(){for(const [key,items] of Object.entries(backup||{}))db[key].splice(0,db[key].length,...items);unlock?.();unlock=null;},
