@@ -5,7 +5,7 @@ import { startBenchmarkLabel } from './benchmark.js';
 import { optimizeCompanyLogo } from './logo.js';
 import { deviceGet,deviceSet } from './device-store.js';
 import { escapeHtml as html,byteLength,cleanBusinessProfile,safeExternalUrl,BUSINESS_THEMES,PROFILE_DAYS } from './model.js';
-import { INDUSTRIES,industryFor,searchIndustries,quickActionsFor,messageFromAction } from './business-templates.js';
+import { INDUSTRIES,industryFor,searchIndustries,quickActionsFor,messageFromAction,quickMessageCollection,addQuickMessageTemplate } from './business-templates.js';
 import { REPORT_REASONS,USER_REPORT_REASONS,validateReport } from './report-options.js';
 import { contactCode } from './contact-code.js';
 import { icon } from './icons.js';
@@ -41,6 +41,7 @@ async function loadReputation(id){
 let query='',industryQuery='',industryLimit=12,scanner,toastTimer,sending=false,editing=false,logoDraft;
 let online=true,settingsContactId;
 const business=()=>client.role==='business';
+const quickActions=()=>quickMessageCollection(client.account.industryId,client.account.quickMessages);
 const route=()=>{const [page='gesprekken',id]=location.hash.slice(1).split('/');return {page,id};};
 const contact=id=>client.contacts.find(item=>item.accountId===id);
 const label=item=>item.alias||item.name||'Conappt-gebruiker';
@@ -164,12 +165,12 @@ function chat(id) {
   const item=contact(id);
   if(!item){main.innerHTML=header('Gesprek niet gevonden','Open je gesprekken om verder te gaan.');return;}
   const draft=drafts.get(client.account.accountId+':'+id)||{title:'',text:''};
-  const tools=business()?quickActionsFor(client.account.industryId):[];
+  const tools=business()?quickActions():[];
   main.innerHTML='<section class="chat-panel live-chat" aria-label="Gesprek met '+html(label(item))+'"><header class="chat-header"><a class="icon-button chat-back" href="#gesprekken" aria-label="Terug naar gesprekken">'+icon('back')+'</a>'+avatar(item)+
     '<div class="chat-identity"><h1 class="chat-business-name">'+(business()?html(label(item)):'<a class="company-chat-link" href="#bedrijf/'+id+'">'+html(label(item))+'</a>')+'</h1><span class="chat-business-detail">'+(business()?html(item.code):'Bedrijfsprofiel')+'</span></div><div class="chat-header-actions">'+
     (!business()?'<button class="icon-button" data-action="report" data-id="'+id+'" aria-label="Bedrijf melden" title="Bedrijf melden">'+icon('flag')+'</button>':'')+'<button class="icon-button" data-action="settings" data-id="'+id+'" aria-label="Gespreksinstellingen">'+icon('settings')+'</button></div></header>'+
     '<p class="conversation-block-notice" id="conversation-block-notice" role="status" '+(item.messagingBlocked?'':'hidden')+'>Dit gesprek is geblokkeerd. Nieuwe berichten zijn niet beschikbaar.</p><div class="thread" id="message-thread" role="log" aria-label="Berichten"></div>'+
-    '<div class="composer-wrap">'+(business()?'<div class="quick-tools"><div><strong>Snelle berichten</strong><button class="text-link plain-button" data-action="industries">'+html(industryFor(client.account.industryId)?.label||'Kies een bedrijfstemplate')+'</button></div><div class="quick-tool-buttons">'+tools.map(action=>button(html(action.label)+(action.fields.length?'…':icon('send')),'quick-message','data-id="'+action.id+'" title="'+html(action.text)+'"',true)).join('')+'</div></div>':'')+
+    '<div class="composer-wrap">'+(business()?'<div class="quick-tools"><div><strong>Snelle berichten</strong><button class="text-link plain-button" data-action="industries">'+html(industryFor(client.account.industryId)?.label||'Kies een bedrijfstemplate')+'</button></div><div class="quick-tool-buttons">'+tools.map(action=>button(html(action.label)+(action.fields.length?'…':icon('send')),'quick-message','data-id="'+action.key+'" title="'+html(action.text)+'"',true)).join('')+'</div></div>':'')+
     '<form class="composer" id="reply-form" data-id="'+id+'">'+
     '<div class="composer-row"><label class="sr-only" for="reply">Bericht</label><textarea id="reply" name="text" rows="1" placeholder="'+('Schrijf je bericht…')+'" required>'+html(draft.text)+'</textarea><button class="button send-button" type="submit" aria-label="Bericht versturen">'+icon('send')+'</button></div>'+errorLine+'</form>'+
     '<div class="composer-help"><span>Berichten worden opgehaald zolang Conappt openstaat.</span><span id="byte-count"></span></div></div></section>';
@@ -202,6 +203,34 @@ function profile(id) {
 function field(name,title,value='',type='text',extra='') {
   return '<label class="field-label" for="'+name+'">'+title+'</label><input class="text-input" id="'+name+'" name="'+name+'" type="'+type+'" value="'+html(value)+'" '+extra+'>';
 }
+
+function quickPanel() {
+  const items=quickActions();
+  return '<section class="card company-editor-panel quick-manager"><div class="quick-manager-heading"><div><h2>Snelle berichten</h2><p class="field-help">Alle toegevoegde templates staan hier. Een nieuw template voegt berichten toe en vervangt niets.</p></div></div>'+
+    '<div class="quick-manager-list" id="quick-manager-list">'+items.map(item=>
+      '<button type="button" class="quick-manager-item" data-action="edit-quick-message" data-id="'+html(item.key)+'"><span><strong>'+html(item.label)+'</strong><small>'+html(item.text)+'</small></span>'+icon('edit')+'</button>').join('')+
+    '<button type="button" class="quick-add" data-action="industries" aria-label="Template toevoegen" title="Template toevoegen">'+icon('plus')+'<span>Template toevoegen</span></button>'+
+    '<button type="button" class="quick-add" data-action="new-quick-message" aria-label="Zelf bericht toevoegen" title="Zelf bericht toevoegen">'+icon('plus')+'<span>Eigen bericht</span></button></div></section>';
+}
+function refreshQuickPanel() {
+  const old=document.querySelector('.quick-manager');if(!old)return;
+  const wrapper=document.createElement('div');wrapper.innerHTML=quickPanel();
+  old.replaceWith(wrapper.firstElementChild);
+}
+function editQuickMessage(key) {
+  if(!business())return;
+  const item=quickActions().find(q=>q.key===key);
+  if(key&&!item)return;
+  const isNew=!key;
+  openDialog('<h2>'+(isNew?'Nieuw snelbericht':'Snelbericht bewerken')+'</h2><form id="quick-message-editor" data-key="'+html(key||'')+'">'+
+    field('quick-label','Knopnaam',item?.label||'','text','maxlength="35" required')+
+    field('quick-title','Berichttitel',item?.title||'','text','maxlength="150" required')+
+    '<label class="field-label" for="quick-text">Berichttekst</label><textarea class="text-input" id="quick-text" name="text" rows="5" maxlength="1024" required>'+html(item?.text||'')+'</textarea>'+
+    errorLine+'<div class="dialog-actions">'+button('Annuleren','close-dialog','',true)+
+    (isNew?'':button('Verwijderen','delete-quick-message','data-id="'+html(key)+'"',true))+
+    '<button class="button" type="submit">Snelbericht opslaan</button></div></form>');
+}
+
 function profileEditor(item,p) {
   logoDraft=p.logo;
   main.innerHTML='<div class="company-profile-toolbar"><h1>Je bedrijfsprofiel</h1>'+button('Annuleren','cancel-edit','',true)+'</div><form id="company-profile-form" class="company-profile-form"><section class="card company-editor-panel">'+
@@ -210,8 +239,10 @@ function profileEditor(item,p) {
     '<details class="card company-editor-panel"><summary>Contactgegevens</summary>'+field('company-phone','Telefoonnummer (optioneel)',p.phone)+field('company-website','Website (optioneel)',p.website,'url')+
     ['instagram','facebook','linkedin'].map(key=>field('social-'+key,key,p.socials[key],'url')).join('')+'</details>'+
     '<details class="card company-editor-panel"><summary>Openingstijden</summary><div class="company-hour-fields">'+PROFILE_DAYS.map(day=>'<div>'+field('hours-'+day,day,p.hours[day])+'</div>').join('')+'</div></details>'+
-    '<section class="card company-editor-panel"><h2>Actieknoppen</h2><p class="field-help">Optioneel. Open bijvoorbeeld je eigen reserveringspagina.</p>'+
-    [0,1,2].map(i=>'<details class="live-action-editor" '+(p.actions[i]?'open':'')+'><summary>Actie '+(i+1)+'</summary>'+field('action-label-'+i,'Knoptekst',p.actions[i]?.label||'','text','maxlength="35"')+field('action-url-'+i,'Link (https://)',p.actions[i]?.url||'','url')+'</details>').join('')+'</section>'+
+    quickPanel()+
+    '<section class="card company-editor-panel"><h2>Externe actieknoppen</h2><p class="field-help">Optioneel. Bijvoorbeeld een link naar je reserveringspagina.</p><div id="external-action-list">'+
+    p.actions.map((a,i)=>'<details class="live-action-editor" open><summary>'+html(a.label)+'</summary>'+field('action-label-'+i,'Knoptekst',a.label,'text','maxlength="35"')+field('action-url-'+i,'Link (https://)',a.url,'url')+'</details>').join('')+
+    '</div>'+(p.actions.length<3?button(icon('plus')+' Actie toevoegen','add-external-action','',true):'')+'</section>'+
     '<div class="company-form-footer"><button class="button" type="submit">Bedrijfsprofiel opslaan</button>'+errorLine+'</div></form>';
 }
 function settings(id) {
@@ -342,12 +373,34 @@ document.addEventListener('click',async event=>{
       } catch(error){const element=document.querySelector('#scanner-status');if(element)element.textContent=error.name==='NotAllowedError'?'Geen cameratoegang. Geef toestemming of vul de code hieronder in.':error.message;el.disabled=false;}
     } else if(action==='industries')industries();
     else if(action==='more-industries'){industryLimit+=12;industryResults();}
-    else if(action==='choose-industry'){el.disabled=true;await client.update({industryId:el.dataset.id});dialog.close();render();toast('Je snelle berichtknoppen staan klaar.');}
+    else if(action==='choose-industry'){
+      el.disabled=true;
+      const previous=quickActions().length;
+      const quickMessages=addQuickMessageTemplate(client.account.industryId,client.account.quickMessages,el.dataset.id);
+      await client.update({industryId:el.dataset.id,quickMessages});
+      dialog.close();if(!editing)render();else refreshQuickPanel();
+      toast((quickMessages.length-previous)+' snelberichten toegevoegd.');
+    }
+    else if(action==='new-quick-message')editQuickMessage(null);
+    else if(action==='edit-quick-message')editQuickMessage(el.dataset.id);
+    else if(action==='delete-quick-message'){
+      const quickMessages=quickActions().filter(q=>q.key!==el.dataset.id);
+      await client.update({quickMessages});dialog.close();refreshQuickPanel();toast('Snelbericht verwijderd.');
+    }
+    else if(action==='add-external-action'){
+      const list=document.querySelector('#external-action-list');
+      if(!list)return;
+      const i=list.children.length;if(i>=3)return;
+      const wrapper=document.createElement('div');
+      wrapper.innerHTML='<details class="live-action-editor" open><summary>Nieuwe actie</summary>'+field('action-label-'+i,'Knoptekst','','text','maxlength="35"')+field('action-url-'+i,'Link (https://)','','url')+'</details>';
+      list.append(wrapper.firstElementChild);
+      if(i===2)el.remove();
+    }
     else if(action==='quick-message') {
-      const item=quickActionsFor(client.account.industryId).find(item=>item.id===el.dataset.id);
+      const item=quickActions().find(item=>item.key===el.dataset.id);
       if(!item)return;
       if(!item.fields.length){const message=messageFromAction(item);await send(route().id,message.title,message.text);}
-      else openDialog('<h2>'+html(item.label)+'</h2><form id="quick-action-form" data-id="'+item.id+'" data-contact="'+route().id+'">'+item.fields.map(f=>field(f.name,f.label,'',f.type,'required '+(f.type==='number'?'min="0" max="1000000" step="0.01"':'maxlength="200"'))).join('')+errorLine+'<div class="dialog-actions">'+closeButton()+'<button class="button" type="submit">Bericht versturen</button></div></form>');
+      else openDialog('<h2>'+html(item.label)+'</h2><form id="quick-action-form" data-id="'+item.key+'" data-contact="'+route().id+'">'+item.fields.map(f=>field(f.name,f.label,'',f.type,'required '+(f.type==='number'?'min="0" max="1000000" step="0.01"':'maxlength="200"'))).join('')+errorLine+'<div class="dialog-actions">'+closeButton()+'<button class="button" type="submit">Bericht versturen</button></div></form>');
     } else if(action==='retry-message') {
       const pending=client.history.pending.find(item=>item.id===el.dataset.id);
       if(pending)await send(pending.contactId,pending.title,pending.text,pending.id);
@@ -416,14 +469,20 @@ document.addEventListener('change',async event=>{
 });
 document.addEventListener('submit',async event=>{
   const form=event.target;
-  if(!['signup-business','connect-form','reply-form','quick-action-form','report-form','company-profile-form','personal-profile','custom-theme','conversation-note-form'].includes(form.id))return;
+  if(!['signup-business','connect-form','reply-form','quick-action-form','report-form','company-profile-form','personal-profile','custom-theme','conversation-note-form','quick-message-editor'].includes(form.id))return;
   event.preventDefault();
   if(form.dataset.submitting==='true')return;
   form.dataset.submitting='true';
   const submit=form.querySelector('[type="submit"]');submit.disabled=true;
   try {
     const data=new FormData(form);
-    if(form.id==='conversation-note-form') {
+    if(form.id==='quick-message-editor') {
+      const key=form.dataset.key||'custom:'+crypto.randomUUID();
+      const entry={key,label:data.get('quick-label'),title:data.get('quick-title'),text:data.get('text')};
+      const quickMessages=quickActions().filter(q=>q.key!==key).map(({key,label,title,text})=>({key,label,title,text}));
+      quickMessages.push(entry);
+      await client.update({quickMessages});dialog.close();refreshQuickPanel();toast('Snelbericht opgeslagen.');
+    } else if(form.id==='conversation-note-form') {
       await client.updateConversation(form.dataset.id,{note:data.get('note')});if(dialog.contains(form))dialog.close();if(route().page==='gesprekken')updateInbox();toast('Privénotitie opgeslagen.');
     } else if(form.id==='signup-business') {
       await client.register('business',data.get('name')||data.get('signup-name'));
@@ -437,7 +496,7 @@ document.addEventListener('submit',async event=>{
       dialog.close();go('gesprek/'+id);render();toast('Jullie zijn verbonden.');
     } else if(form.id==='reply-form')await send(form.dataset.id,'',data.get('text'));
     else if(form.id==='quick-action-form') {
-      const action=quickActionsFor(client.account.industryId).find(item=>item.id===form.dataset.id);
+      const action=quickActions().find(item=>item.key===form.dataset.id);
       const message=messageFromAction(action,Object.fromEntries(data));
       await send(form.dataset.contact,message.title,message.text);
     } else if(form.id==='report-form') {
@@ -450,7 +509,7 @@ document.addEventListener('submit',async event=>{
       if(dialog.contains(form))openDialog('<div class="report-success">'+icon('check')+'<h2>Melding ontvangen</h2><p>Je melding is opgeslagen bij Conappt. Je contact kan je melding niet bekijken.</p><p class="field-help">Referentie: '+html(result.reportId)+'</p></div><div class="dialog-actions">'+button('Klaar','close-dialog')+'</div>');
       else toast('Je melding is opgeslagen bij Conappt.');
     } else if(form.id==='company-profile-form') {
-      const value=id=>document.getElementById(id).value.trim();
+      const value=id=>document.getElementById(id)?.value.trim()||'';
       for(const id of ['company-website',...['instagram','facebook','linkedin'].map(k=>'social-'+k),...[0,1,2].map(i=>'action-url-'+i)])
         if(value(id)&&!safeExternalUrl(value(id)))throw new Error('Gebruik volledige HTTPS-links zonder inloggegevens.');
       const actions=[0,1,2].map(i=>({label:value('action-label-'+i),url:value('action-url-'+i)}));
