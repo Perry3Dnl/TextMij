@@ -14,7 +14,8 @@ test('business closure is confirmed, visible to customers and blocks further wri
   await owner.getByRole('button',{name:'Klant verbinden'}).click();
   await owner.getByLabel('Conappt-code').fill(code);
   await owner.getByRole('button',{name:'Verbinden',exact:true}).click();
-  await owner.goto('/#gesprekken');
+  await expect(owner.locator('.chat-panel')).toBeVisible();
+  await owner.getByRole('link',{name:'Terug naar gesprekken'}).click();
   await expect(owner.locator('.sessions-header')).toBeVisible();
   await owner.getByRole('button',{name:'Instellingen',exact:true}).click();
   await owner.getByRole('button',{name:'Bedrijfsaccount sluiten'}).click();
