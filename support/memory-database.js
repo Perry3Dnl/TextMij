@@ -23,6 +23,10 @@ export function memoryDatabase() {
       for(const m of db.messages)if(m.status==='queued'&&((m.sender_business_id===args[0]&&m.recipient_device_id===args[1])||(m.sender_business_id===args[2]&&m.recipient_device_id===args[3])))m.status='failed';
       return [{affectedRows:1}];
     }
+    if(query.startsWith("UPDATE encrypted_messages SET status = 'failed'") && query.includes('sender_business_id = ? OR recipient_device_id = ?')){
+      for(const m of db.messages)if(m.status==='queued'&&(m.sender_business_id===args[0]||m.recipient_device_id===args[1]))m.status='failed';
+      return [{affectedRows:1}];
+    }
     if(query.startsWith('INSERT INTO accounts')) {
       const [id,kind,public_code,display_name,email,public_key,credential_hash]=args;
       if(db.accounts.some(a=>a.public_code===public_code))throw Object.assign(new Error('Duplicate code'),{code:'ER_DUP_ENTRY'});
