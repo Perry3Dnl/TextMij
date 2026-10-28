@@ -1,4 +1,5 @@
 import { lockConversation,hasBlock } from './conversation-blocks.js';
+import {assertOpenBusiness,parseClosure,expiredClosure} from './business-closure.js';
 import { randomBytes, createHash } from 'node:crypto';
 import { EncryptedOutbox } from './encrypted-outbox.js';
 import { ContactsApi } from './contacts-api.js';
@@ -92,6 +93,10 @@ export class MessagingApi {
       [identifier,identifier]);
     if (!rows.length) throw error(404,'Account not found');
     const a = rows[0];
+    if(a.kind==='business'){
+      const [profiles]=await this.pool.execute('SELECT profile_json FROM business_profiles WHERE account_id = ? LIMIT 1',[a.id]);
+      if(expiredClosure(parseClosure(profiles[0]?.profile_json)))throw error(404,'Bedrijfsprofiel niet meer beschikbaar.');
+    }
     responseJson(response,200,{accountId:a.id,code:a.public_code,kind:a.kind,publicKey:a.public_key,keyVersion:a.key_version});
   }
   async send(request,response) {
@@ -107,6 +112,7 @@ export class MessagingApi {
       await connection.beginTransaction();
       await lockConversation(connection,sender.id,envelope.recipientId);
       if(await hasBlock(connection,sender.id,envelope.recipientId))throw error(403,'Dit gesprek is geblokkeerd.');
+      await assertOpenBusiness(connection,sender.kind==='business'?sender.id:envelope.recipientId);
       accepted=await new EncryptedOutbox(connection).enqueue({senderId:sender.id,tier:sender.kind==='personal'?'standard':sender.tier,
         envelope,idempotencyKey:input.idempotencyKey.toLowerCase()});
       await connection.commit();
