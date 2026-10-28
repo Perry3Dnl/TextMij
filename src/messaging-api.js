@@ -2,6 +2,7 @@ import { randomBytes, createHash } from 'node:crypto';
 import { EncryptedOutbox } from './encrypted-outbox.js';
 import { ContactsApi } from './contacts-api.js';
 import { ReportsApi } from './reports-api.js';
+import { ReputationApi } from './reputation-api.js';
 import { httpError as error, readJson, responseJson } from './http-json.js';
 
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
@@ -26,6 +27,7 @@ export class MessagingApi {
     this.registrationCounts = new Map();
     this.contacts = new ContactsApi(pool, request => this.authenticate(request));
     this.reports = new ReportsApi(pool, request => this.authenticate(request));
+    this.reputation = new ReputationApi(pool, request => this.authenticate(request));
   }
   async authenticate(request) {
     const role = request.headers['x-conappt-role'];
@@ -123,6 +125,7 @@ export class MessagingApi {
   async handle(request,response,path) {
     try {
       const url = new URL(request.url,'http://localhost');
+      if (await this.reputation.handle(request,response,path)) return;
       if (await this.reports.handle(request,response,path)) return;
       if (await this.contacts.handle(request,response,path)) return;
       if (request.method === 'POST' && path === '/api/v1/accounts') return await this.register(request,response);
