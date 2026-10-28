@@ -34,6 +34,13 @@ export function memoryDatabase() {
     if(query.startsWith('SELECT a.*,')&&query.includes('FROM accounts a LEFT JOIN'))return [db.accounts.filter(a=>a.id===args[0]).map(merged)];
     if(query.startsWith('SELECT id,kind FROM accounts WHERE public_code'))return [db.accounts.filter(a=>a.public_code===args[0])];
     if(query.startsWith('SELECT id FROM accounts'))return [db.accounts.filter(a=>a.id===args[0]).map(a=>({id:a.id}))];
+    if(query.startsWith('SELECT profile_json FROM business_profiles WHERE account_id'))return [db.profiles.filter(p=>p.account_id===args[0]).map(p=>({profile_json:p.profile_json}))];
+    if(query.startsWith('INSERT INTO business_profiles')&&query.includes("JSON_SET")){
+      const [account_id,profile_json]=args;const existing=db.profiles.find(p=>p.account_id===account_id);
+      if(existing){const profile=JSON.parse(existing.profile_json||'{}');if(!profile.closedAt){profile.closedAt=JSON.parse(profile_json).closedAt;existing.profile_json=JSON.stringify(profile);}}
+      else db.profiles.push({account_id,industry_id:null,profile_json});
+      return [{affectedRows:1}];
+    }
     if(query.startsWith('INSERT INTO business_profiles')) {
       const [account_id,industry_id,profile_json]=args;
       const existing=db.profiles.find(p=>p.account_id===account_id);
