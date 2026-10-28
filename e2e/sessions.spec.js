@@ -55,23 +55,17 @@ for(const width of [320,390,1200]) {
     await business.getByRole('button',{name:'Zwart (dark mode)',exact:true}).click();
     await expect(business.getByRole('button',{name:'Zwart (dark mode)',exact:true})).toHaveAttribute('aria-pressed','true');
     await business.getByRole('button',{name:'Instellingen sluiten'}).click();
-    await business.locator('.session-row [data-action="settings"]').click();
-    await conversationOnly(business);
-    await expect(business.locator('#settings-dialog .session-context')).toContainText('Sam');
-    await business.getByRole('link',{name:'Open gesprek',exact:true}).click();
-    await expect(business.locator('#settings-dialog')).not.toBeVisible();
+    await expect(business.locator('.conversation-bar')).toHaveCount(1);
+    await expect(business.locator('.conversation-bar button')).toHaveCount(5);
+    await business.locator('.conversation-row').click();
     await expect(business.locator('#reply')).toHaveValue('Een conceptbericht');
     await business.getByRole('button',{name:'Bericht versturen'}).click();
 
     await expect(customer.locator('.session-row')).toHaveCount(1);
     await customer.screenshot({path:testInfo.outputPath('customer-inbox.png'),fullPage:true});
-    await customer.locator('.session-row [data-action="settings"]').click();
-    await expect(customer.locator('#settings-dialog .session-context')).toContainText('Garage <Test>');
-    await conversationOnly(customer);
-    await expect(customer.locator('#settings-dialog').getByRole('button',{name:'Bedrijf melden',exact:true})).toBeVisible();
+    await expect(customer.locator('.conversation-bar')).toHaveCount(1);
+    await expect(customer.locator('.conversation-bar').getByRole('button',{name:'Bedrijf melden'})).toBeVisible();
     await expect(customer.locator('.chat-panel')).toHaveCount(0);
-    await customer.keyboard.press('Escape');
-    await expect(customer.locator('#settings-dialog')).not.toBeVisible();
     await customer.locator('.conversation-row').click();
     await expect(customer.locator('#message-thread')).toContainText('Een conceptbericht');
     await fullScreenChat(customer);
