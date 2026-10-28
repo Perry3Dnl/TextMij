@@ -17,10 +17,12 @@ test('two devices connect by a real QR scan, exchange messages, and report priva
   await business.goto('/');
   await business.getByLabel('Bedrijfsnaam',{exact:true}).fill('Garage Testbedrijf');
   await business.getByRole('button',{name:'Start je bedrijf',exact:false}).click();
-  await expect(business.getByRole('heading',{name:'Garage Testbedrijf',exact:true})).toBeVisible();
-  await business.getByRole('button',{name:'Kies bedrijfstemplate',exact:true}).click();
+  await expect(business.getByRole('heading',{name:'Klantgesprekken',exact:true})).toBeVisible();
+  await business.getByRole('button',{name:'Instellingen',exact:true}).click();
+  await business.getByRole('button',{name:'Bedrijfstemplate',exact:true}).click();
   await business.getByLabel('Zoek een bedrijfstemplate').fill('garage');
   await business.getByRole('button',{name:/Autogarage/}).click();
+  await business.getByRole('button',{name:'Instellingen sluiten',exact:true}).click();
 
   await business.evaluate(async image=>{
     const canvas=document.createElement('canvas');canvas.width=canvas.height=640;
@@ -79,7 +81,7 @@ test('denied camera falls back to manual linking and other reports require an ex
   const code=(await customer.locator('.live-device-code').innerText()).trim();
   await business.goto('/');await business.getByLabel('Bedrijfsnaam',{exact:true}).fill('Fiets Testbedrijf');
   await business.getByRole('button',{name:'Start je bedrijf',exact:false}).click();
-  await expect(business.getByRole('heading',{name:'Fiets Testbedrijf',exact:true})).toBeVisible();
+  await expect(business.getByRole('heading',{name:'Klantgesprekken',exact:true})).toBeVisible();
   await business.evaluate(()=>navigator.mediaDevices.getUserMedia=async()=>{throw new DOMException('Camera denied','NotAllowedError');});
   await business.getByRole('button',{name:'Klant verbinden',exact:true}).click();
   await business.getByRole('button',{name:'Scan QR-code',exact:true}).click();
@@ -98,3 +100,4 @@ test('denied camera falls back to manual linking and other reports require an ex
   await expect(customer.getByRole('heading',{name:'Melding ontvangen',exact:true})).toBeVisible();
   await customerContext.close();await businessContext.close();
 });
+

@@ -1,9 +1,10 @@
+import { showSettings,closeSettings,settingsDialog } from './session-ui.js';
 import { startBenchmarkLabel } from './benchmark.js';
 import { optimizeCompanyLogo } from './logo.js';
 import {
   STORAGE_KEY, DEMO_CODE, MESSAGE_LIMITS, freshState, restoreState, contactsFor,
   escapeHtml as html, byteLength, validateReply, validateBusinessMessage, messagesFor,
-  conversationsFor, totalUnread, addReply, addBusinessMessage, addCustomer, markRead,
+  conversationsFor, addReply, addBusinessMessage, addCustomer, markRead,
   VERIFY_PRICE_EUR, hasDemoVerification, setDemoVerification,
   BUSINESS_THEMES, businessThemeFor, setBusinessTheme, PROFILE_DAYS, cleanBusinessProfile,
 } from './model.js';
@@ -39,6 +40,7 @@ try { raw = localStorage.getItem(STORAGE_KEY); } catch { /* Private browsing can
 let state = restoreState(raw);
 let query = '';
 let unreadOnly = false;
+let settingsContactId;
 let editingCompanyProfile = false;
 const drafts = new Map();
 const titleDrafts = new Map();
@@ -70,7 +72,7 @@ function persist(notify = true) {
 persist(false);
 
 function route() {
-  const hash = location.hash.slice(1) || 'home';
+  const hash = location.hash.slice(1) || 'gesprekken';
   const [page, id] = hash.split('/');
   return { page, id };
 }
@@ -104,13 +106,8 @@ function pageHeader(title, subtitle, eyebrow = 'FIJN DAT JE ER BENT') {
 }
 
 function updateNavigation() {
-  const { page } = route();
-  const active = page === 'gesprek' ? 'gesprekken' : page;
-  const count = totalUnread(state);
-  const links = [ ['home', 'Home', 'home'], ['gesprekken', 'Gesprekken', 'chat'], ['instellingen', 'Instellingen', 'settings'] ];
-  const markup = links.map(([id, title, symbol]) => `<a class="nav-link ${active === id ? 'active' : ''}" href="#${id}" ${active === id ? 'aria-current="page"' : ''}>${icon(symbol)}<span>${title}</span>${id === 'gesprekken' && count ? `<span class="nav-badge" aria-label="${count} ongelezen berichten">${count}</span>` : ''}</a>`).join('');
-  document.querySelector('.desktop-navigation').innerHTML = markup;
-  document.querySelector('.mobile-navigation').innerHTML = markup;
+  document.querySelector('.desktop-navigation').innerHTML = '';
+  document.querySelector('.mobile-navigation').innerHTML = '';
   const profileName = isBusiness() ? state.business.name : state.name;
   document.querySelectorAll('[data-profile-name]').forEach((element) => { element.textContent = profileName; });
   document.querySelectorAll('[data-profile-initial]').forEach((element) => { if (isBusiness() && state.business.profile.logo) { element.innerHTML = companyLogo('profile-logo-image'); } else { element.textContent = Array.from(profileName)[0]?.toLocaleUpperCase('nl') || 'J'; } });
@@ -139,25 +136,15 @@ function conversationRow(business) {
   const last = business.last;
   const outgoing = isBusiness() ? last.from === 'business' : last.from === 'customer';
   const preview = !business.hasMessages ? 'Nog geen berichten' : `${outgoing ? 'Jij: ' : ''}${last.title || last.text}`;
-  return `<a class="conversation-row ${business.unread ? 'has-unread' : ''}" href="#gesprek/${business.id}" aria-label="Gesprek met ${html(business.name)}${business.unread ? `, ${business.unread} ongelezen berichten` : ''}">
-    ${avatar(business)}<div class="conversation-copy"><div class="conversation-top"><span class="conversation-name">${html(business.name)}${!isBusiness() && business.id === 'studio-noord' ? verificationLabel() : ''}</span><time class="conversation-time" datetime="${new Date(last.at).toISOString()}">${shortTime(last.at)}</time></div><div class="conversation-bottom"><span class="conversation-preview">${html(preview)}</span>${mutedChats().includes(business.id) ? icon('bellOff', 'muted-icon') : ''}${business.unread ? `<span class="unread-badge" aria-hidden="true">${business.unread}</span>` : ''}</div></div></a>`;
-}
-
-function renderHome() {
-  const recent = conversationsFor(state).slice(0, 3);
-  main.innerHTML = `${pageHeader(`Hoi ${state.name},`, 'Jouw berichten. Lekker overzichtelijk.')}
-    <div class="home-grid">
-      <section class="card code-card" aria-labelledby="code-heading"><div class="card-heading"><h2 class="card-label" id="code-heading">JOUW TEXTMIJ-CODE</h2><span class="sample-label">Voorbeeld</span></div><p class="code-description">Eén code voor al je zakelijke berichten.<br>Deel hem met een bedrijf en blijf op de hoogte.</p><div class="device-code" aria-label="Voorbeeldcode ${DEMO_CODE}"><span>7483</span><span class="code-dash">–</span><span>RGY</span><span class="code-dash">–</span><span>RCH</span></div><div class="code-actions"><button class="button" data-action="copy-code" aria-label="Kopieer voorbeeldcode">${icon('copy')}Kopieer code</button><button class="button secondary" data-action="share-code" aria-label="Deel voorbeeldcode">${icon('share')}Delen</button></div><div class="device-note">${icon('phone')}Een eigen code per toestel</div></section>
-      <div class="home-secondary"><section class="card how-card" aria-labelledby="how-heading"><h2 id="how-heading">Klein gebaar, korte lijntjes.</h2><ol class="how-list"><li><span class="step-number">1</span><div><strong>Deel je code</strong><p>Geef je Conappt-code aan een bedrijf.</p></div></li><li><span class="step-number">2</span><div><strong>Ontvang een update</strong><p>Van een bevestiging tot goed nieuws.</p></div></li><li><span class="step-number">3</span><div><strong>Reageer gewoon hier</strong><p>Een vraag of bedankje? Zo geregeld.</p></div></li></ol></section><section class="card quiet-card"><div class="icon-orbit">${icon('leaf')}</div><h3>Jouw inbox. Jouw rust.</h3><p>Jij bepaalt welke meldingen je wilt ontvangen.</p><a class="text-link" href="#instellingen">Pas je voorkeuren aan ${icon('arrow')}</a></section></div>
-      <section class="home-recent" aria-labelledby="recent-heading"><div class="section-heading"><h2 id="recent-heading">Je laatste gesprekken</h2><a class="text-link" href="#gesprekken">Bekijk alles ${icon('arrow')}</a></div><div class="card conversation-list">${recent.map(conversationRow).join('')}</div></section>
-    </div>${previewNote()}`;
+  return `<div class="session-row"><a class="conversation-row ${business.unread ? 'has-unread' : ''}" href="#gesprek/${business.id}" aria-label="Gesprek met ${html(business.name)}${business.unread ? `, ${business.unread} ongelezen berichten` : ''}">
+    ${avatar(business)}<div class="conversation-copy"><div class="conversation-top"><span class="conversation-name">${html(business.name)}${!isBusiness() && business.id === 'studio-noord' ? verificationLabel() : ''}</span><time class="conversation-time" datetime="${new Date(last.at).toISOString()}">${shortTime(last.at)}</time></div><div class="conversation-bottom"><span class="conversation-preview">${html(preview)}</span>${mutedChats().includes(business.id) ? icon('bellOff', 'muted-icon') : ''}${business.unread ? `<span class="unread-badge" aria-hidden="true">${business.unread}</span>` : ''}</div></div></a><button class="icon-button session-settings" data-action="settings" data-id="${business.id}" aria-label="Instellingen voor ${html(business.name)}">${icon('settings')}</button></div>`;
 }
 
 function renderInbox() {
   const business = isBusiness();
-  main.innerHTML = `${pageHeader(business ? 'Klantgesprekken' : 'Gesprekken', business ? 'Je klanten dichtbij. Alles gewoon vanuit de app.' : 'Alle bedrijven op één plek. Jij houdt het overzicht.', business ? 'JOUW BEDRIJF' : 'KORTE LIJNTJES')}
+  main.innerHTML = `<header class="sessions-header"><div><p class="eyebrow">${business ? html(state.business.name) : 'CONAPPT · VOORBEELD'}</p><h1>${business ? 'Klantgesprekken' : 'Gesprekken'}</h1></div><button class="icon-button" data-action="settings" aria-label="Instellingen">${icon('settings')}</button></header>${business ? '' : `<div class="session-shortcuts"><button class="button secondary" data-action="copy-code">${icon('copy')}${DEMO_CODE}</button></div>`}
     <div class="inbox-toolbar"><div class="search-field">${icon('search')}<label class="sr-only" for="conversation-search">${business ? 'Zoek een klant' : 'Zoek een bedrijf'}</label><input id="conversation-search" type="search" placeholder="${business ? 'Zoek een klant…' : 'Zoek een bedrijf…'}" value="${html(query)}" autocomplete="off"><button class="search-clear" type="button" data-action="clear-search" aria-label="Zoekopdracht wissen" ${query ? '' : 'hidden'}>${icon('close')}</button></div><div class="inbox-actions"><div class="filter-tabs" role="group" aria-label="Gesprekken filteren"><button class="filter-button" data-filter="all">Alle gesprekken</button><button class="filter-button" data-filter="unread">Ongelezen</button></div>${business ? `<button class="button" data-action="new-customer">${icon('plus')}Nieuw gesprek</button>` : ''}</div></div>
-    <section class="card conversation-list inbox-list" id="conversation-list" aria-label="Gesprekken"></section><p class="inbox-summary" id="inbox-summary" role="status"></p>${previewNote()}`;
+    <section class="conversation-list inbox-list" id="conversation-list" aria-label="Gesprekken"></section><p class="inbox-summary" id="inbox-summary" role="status"></p>${previewNote()}`;
   updateInboxList();
 }
 
@@ -184,22 +171,20 @@ function switchRow(key, title, description) {
   return `<div class="toggle-row"><div><span class="toggle-label" id="label-${key}">${title}</span><span class="toggle-description" id="help-${key}">${description}</span></div><button class="toggle" role="switch" aria-checked="${checked}" aria-labelledby="label-${key}" aria-describedby="help-${key}" data-preference="${key}" ${disabled ? 'disabled' : ''}></button></div>`;
 }
 
-function renderSettings() {
+function sessionSettingsContent() {
+  const item=contactFor(settingsContactId);
+  return (item?`<section class="card settings-card session-context">${avatar(item)}<h3>${html(item.name)}</h3><button class="button secondary" data-action="mute-chat" data-id="${item.id}" aria-pressed="${mutedChats().includes(item.id)}" aria-label="${mutedChats().includes(item.id)?'Meldingen voor dit gesprek aanzetten':'Meldingen voor dit gesprek uitzetten'}">${icon(mutedChats().includes(item.id)?'bellOff':'bell')}</button><a class="button secondary" href="#gesprek/${item.id}">Open gesprek</a> <button class="button secondary" data-action="business-info" data-id="${item.id}">${icon('info')} Over dit gesprek</button></section>`:'')+`<div class="settings-account"><button class="button secondary" data-action="switch-account">${icon(isBusiness()?'business':'person')} Wissel van account</button></div>`;
+}
+
+function renderSettings(id) {
+  settingsContactId=id;
   if (isBusiness()) { renderBusinessSettings(); return; }
-  main.innerHTML = `${pageHeader('Helemaal naar jouw hand.', 'Een paar voorkeuren. Verder lekker eenvoudig.', 'INSTELLINGEN')}
+  showSettings(`${sessionSettingsContent()}
     <div class="settings-layout"><div>
       <section class="card settings-card"><div class="settings-section-heading"><h2>Zo heet je hier</h2><p>Deze naam wordt bij je berichten getoond.</p></div><form class="profile-form" id="profile-form"><label class="field-label" for="display-name">Naam of gebruikersnaam</label><input class="text-input" id="display-name" name="name" value="${html(state.name)}" maxlength="60" autocomplete="nickname" required><div class="form-footer"><p class="field-help">Gewoon hoe je genoemd wilt worden.</p><button class="button" id="save-name" type="submit" disabled>Opslaan</button></div><p class="form-error" id="name-error" role="alert" hidden></p></form></section>
       <section class="card settings-card"><div class="settings-section-heading"><h2>Meldingen</h2><p>Bewaar je voorkeuren voor dit apparaat. In deze voorbeeldversie worden nog geen meldingen verstuurd.</p></div>${switchRow('notifications', 'Nieuwe berichten', 'Een melding wanneer er iets nieuws voor je is.')}${switchRow('sound', 'Een geluidje erbij', 'Een subtiele toon bij een nieuw bericht.')}${switchRow('previews', 'Berichtvoorbeeld tonen', 'Laat een stukje van het bericht in de melding zien.')}</section>
       <section class="card settings-card"><div class="settings-section-heading"><h2>Dit voorbeeld</h2><p>Je reacties en voorkeuren worden alleen in deze browser bewaard.</p></div><div class="reset-row"><button class="reset-button" data-action="reset-preview">Voorbeeld opnieuw beginnen</button></div></section>
-    </div><aside class="card settings-info"><div class="icon-orbit">${icon('phone')}</div><h2>Nieuw toestel.<br>Nieuwe start.</h2><p>Bij Conappt hoort je code bij je toestel. Een nieuwe telefoon krijgt een nieuwe code en begint met een lege inbox.</p><div class="info-divider"></div><p class="small-copy">Je hebt geen telefoonnummer of e-mailadres nodig. Alleen een naam om je in het gesprek te herkennen.</p></aside></div>`;
-}
-
-function renderBusinessHome() {
-  const recent = conversationsFor(state).slice(0, 3);
-  main.innerHTML = `${pageHeader('Korte lijntjes met je klanten.', 'Updates versturen, vragen beantwoorden. Gewoon hier.', 'JOUW BEDRIJF')}
-    <div class="home-grid"><section class="card code-card business-home-card"><div class="card-heading"><h2 class="card-label">JE ZAKELIJKE PROFIEL</h2><span class="sample-label">Voorbeeld</span></div><div class="business-identity"><span class="business-mark">${state.business.profile.logo ? companyLogo('business-logo-image') : icon('business')}</span><div><h2>${html(state.business.name)} ${verificationLabel()}</h2><p>${html(state.business.email)}</p></div></div><p class="code-description">Een bevestiging of een korte update?<br>Vraag om de Conappt-code van je klant en begin.</p><div class="code-actions"><button class="button" data-action="new-customer">${icon('plus')}Nieuw gesprek</button><a class="button secondary" href="#gesprekken">Je klanten ${icon('arrow')}</a></div><div class="device-note">${icon('phone')}Alles vanuit dezelfde app</div></section>
-    <div class="home-secondary"><section class="card how-card"><h2>Een bericht is zo geregeld.</h2><ol class="how-list"><li><span class="step-number">1</span><div><strong>Vraag om de code</strong><p>Je klant vindt die op zijn eigen Home.</p></div></li><li><span class="step-number">2</span><div><strong>Stuur een update</strong><p>Een titel, je bericht en klaar.</p></div></li><li><span class="step-number">3</span><div><strong>Houd contact</strong><p>Antwoorden komen in hetzelfde gesprek.</p></div></li></ol></section><section class="card quiet-card"><div class="icon-orbit">${icon('chat')}</div><h3>Geen eigen website nodig.</h3><p>Gebruik Conappt voor jezelf én voor je bedrijf. Wisselen kan altijd via je profiel.</p><button class="text-link plain-button" data-action="switch-account">Wissel van account ${icon('arrow')}</button></section></div>
-    <section class="home-recent"><div class="section-heading"><h2>Je laatste klantgesprekken</h2><a class="text-link" href="#gesprekken">Bekijk alles ${icon('arrow')}</a></div><div class="card conversation-list">${recent.map(conversationRow).join('')}</div></section></div>${previewNote()}`;
+    </div><aside class="card settings-info"><div class="icon-orbit">${icon('phone')}</div><h2>Nieuw toestel.<br>Nieuwe start.</h2><p>Bij Conappt hoort je code bij je toestel. Een nieuwe telefoon krijgt een nieuwe code en begint met een lege inbox.</p><div class="info-divider"></div><p class="small-copy">Je hebt geen telefoonnummer of e-mailadres nodig. Alleen een naam om je in het gesprek te herkennen.</p></aside></div>`);
 }
 
 function themeStyle(theme) {
@@ -223,7 +208,7 @@ function renderCompanyProfile(id) {
   const theme = businessThemeFor(state, id, 'personal');
   const external = (label,url) => url ? `<a class="button secondary" href="${html(url)}" target="_blank" rel="noopener noreferrer">${html(label)} ↗</a>` : '';
   const hours = PROFILE_DAYS.map(day => profile.hours[day] ? `<div class="company-hour"><strong>${day}</strong><span>${html(profile.hours[day])}</span></div>` : '').join('');
-  main.innerHTML = `<section class="company-profile" style="${themeStyle(theme)}"><div class="company-profile-toolbar"><a class="text-link" href="${isBusiness() ? '#home' : '#gesprek/'+id}">← ${isBusiness() ? 'Terug naar bedrijf' : 'Terug naar gesprek'}</a>${isBusiness() ? `<button class="button ${editingCompanyProfile ? 'secondary' : ''}" type="button" data-action="toggle-company-profile-edit">${editingCompanyProfile ? 'Annuleren' : 'Profiel bewerken'}</button>` : ''}</div>${isBusiness() && editingCompanyProfile ? `<div class="company-profile-edit">${businessProfileEditor()}</div>` : ''}<div class="company-profile-hero">${profile.logo ? `<img class="company-logo" src="${profile.logo}" alt="Logo van ${html(contact.name)}">` : avatar(contact,'company-logo-fallback')}<div><h1>${html(contact.name)}${verificationLabel()}</h1><p>${html(profile.description || 'Welkom bij ons bedrijfsprofiel.')}</p></div></div><div class="company-profile-grid"><section class="card company-profile-section"><h2>Contact</h2>${profile.phone ? `<p>Telefoon: <a href="tel:${html(profile.phone.replace(/[^+0-9]/g,''))}">${html(profile.phone)}</a></p>` : ''}<p>E-mail: <a href="mailto:${html(state.business.email)}">${html(state.business.email)}</a></p><div class="company-actions">${external('Website',profile.website)}${Object.entries(profile.socials).map(([name,url])=>external(name[0].toUpperCase()+name.slice(1),url)).join('')}</div></section><section class="card company-profile-section"><h2>Openingstijden</h2>${hours || '<p>Geen openingstijden opgegeven.</p>'}</section></div>${profile.actions.length ? `<section class="card company-profile-section company-actions-panel"><h2>Wat wil je doen?</h2><p>Deze knoppen openen een bestaande dienst van het bedrijf. Conappt neemt geen afspraken of reserveringen over.</p><div class="company-actions company-action-buttons">${profile.actions.map(item=>`<a class="button company-action-button" href="${html(item.url)}" target="_blank" rel="noopener noreferrer">${html(item.label)} ${icon('arrow')}</a>`).join('')}</div></section>` : ''}<p class="field-help">Voorbeeldprofiel · gegevens alleen op dit apparaat opgeslagen</p></section>`;
+  main.innerHTML = `<section class="company-profile" style="${themeStyle(theme)}"><div class="company-profile-toolbar"><a class="text-link" href="${isBusiness() ? '#gesprekken' : '#gesprek/'+id}">← ${isBusiness() ? 'Terug naar bedrijf' : 'Terug naar gesprek'}</a>${isBusiness() ? `<button class="button ${editingCompanyProfile ? 'secondary' : ''}" type="button" data-action="toggle-company-profile-edit">${editingCompanyProfile ? 'Annuleren' : 'Profiel bewerken'}</button>` : ''}</div>${isBusiness() && editingCompanyProfile ? `<div class="company-profile-edit">${businessProfileEditor()}</div>` : ''}<div class="company-profile-hero">${profile.logo ? `<img class="company-logo" src="${profile.logo}" alt="Logo van ${html(contact.name)}">` : avatar(contact,'company-logo-fallback')}<div><h1>${html(contact.name)}${verificationLabel()}</h1><p>${html(profile.description || 'Welkom bij ons bedrijfsprofiel.')}</p></div></div><div class="company-profile-grid"><section class="card company-profile-section"><h2>Contact</h2>${profile.phone ? `<p>Telefoon: <a href="tel:${html(profile.phone.replace(/[^+0-9]/g,''))}">${html(profile.phone)}</a></p>` : ''}<p>E-mail: <a href="mailto:${html(state.business.email)}">${html(state.business.email)}</a></p><div class="company-actions">${external('Website',profile.website)}${Object.entries(profile.socials).map(([name,url])=>external(name[0].toUpperCase()+name.slice(1),url)).join('')}</div></section><section class="card company-profile-section"><h2>Openingstijden</h2>${hours || '<p>Geen openingstijden opgegeven.</p>'}</section></div>${profile.actions.length ? `<section class="card company-profile-section company-actions-panel"><h2>Wat wil je doen?</h2><p>Deze knoppen openen een bestaande dienst van het bedrijf. Conappt neemt geen afspraken of reserveringen over.</p><div class="company-actions company-action-buttons">${profile.actions.map(item=>`<a class="button company-action-button" href="${html(item.url)}" target="_blank" rel="noopener noreferrer">${html(item.label)} ${icon('arrow')}</a>`).join('')}</div></section>` : ''}<p class="field-help">Voorbeeldprofiel · gegevens alleen op dit apparaat opgeslagen</p></section>`;
 }
 function businessProfileEditor() {
   const profile = state.business.profile;
@@ -238,12 +223,12 @@ function businessProfileEditor() {
 }
 
 function renderBusinessSettings() {
-  main.innerHTML = `${pageHeader('Je bedrijf, jouw voorkeuren.', 'Je zakelijke profiel en meldingen op één plek.', 'ZAKELIJKE INSTELLINGEN')}
+  showSettings(`${sessionSettingsContent()}
     <div class="settings-layout"><div><section class="card settings-card"><div class="settings-section-heading"><h2>Je bedrijfsprofiel</h2><p>Deze voorbeeldgegevens worden lokaal bewaard.</p></div><form class="profile-form" id="business-profile-form"><label class="field-label" for="business-name">Bedrijfsnaam</label><input class="text-input" id="business-name" name="business-name" value="${html(state.business.name)}" maxlength="80" autocomplete="organization" required><label class="field-label extra-field" for="business-email">E-mailadres</label><input class="text-input" id="business-email" name="business-email" type="email" value="${html(state.business.email)}" maxlength="254" autocomplete="email" required><div class="form-footer"><p class="field-help">Alleen een bedrijfsnaam en e-mailadres.</p><button class="button" type="submit">Opslaan</button></div><p class="form-error" id="business-error" role="alert" hidden></p></form></section>
     ${businessThemePicker()}
     <section class="card settings-card"><div class="settings-section-heading"><h2>Bedrijfsverificatie</h2><p>Geef je bedrijfsnaam een herkenbare blauwe rand. €${VERIFY_PRICE_EUR} per maand wanneer betalingen echt worden ingeschakeld.</p></div><div class="verification-plan"><div><strong>${hasDemoVerification(state) ? 'Demo-verificatie actief' : 'Gratis bedrijfsprofiel'}</strong><p>${hasDemoVerification(state) ? 'De blauwe demo-markering is zichtbaar. Er is geen identiteit gecontroleerd en niets afgeschreven.' : 'Berichten en klantgesprekken blijven gratis. Probeer de markering zonder afschrijving.'}</p></div>${verificationLabel()}<button class="button ${hasDemoVerification(state) ? 'secondary' : ''}" type="button" data-action="${hasDemoVerification(state) ? 'cancel-verification' : 'start-verification'}">${hasDemoVerification(state) ? 'Demo-verificatie uitschakelen' : 'Probeer verificatie · €20/maand'}</button><p class="field-help">Demo: geen echte betaling, abonnement of controle van bedrijfsgegevens.</p></div></section>
     <section class="card settings-card"><div class="settings-section-heading"><h2>Meldingen</h2><p>Deze apparaatvoorkeuren gelden voor beide profielen. In dit voorbeeld worden nog geen meldingen verstuurd.</p></div>${switchRow('notifications', 'Nieuwe berichten', 'Een melding wanneer een klant reageert.')}${switchRow('sound', 'Een geluidje erbij', 'Een subtiele toon bij een nieuw bericht.')}${switchRow('previews', 'Berichtvoorbeeld tonen', 'Laat een stukje van het bericht in de melding zien.')}</section></div>
-    <aside class="business-settings-tools"><section class="card business-settings-panel"><h2>Jouw bedrijfsprofiel</h2><p>Bekijk wat een klant ziet en pas direct je profiel aan.</p><a class="button" href="#bedrijf/studio-noord">Bekijk bedrijfsprofiel ${icon('arrow')}</a><a class="business-settings-link" href="#bedrijf/studio-noord" data-edit-company-profile="true">${icon('business')} Profiel bewerken</a></section><section class="card business-settings-panel"><h2>Snelle instellingen</h2><p>Ga rechtstreeks naar de onderdelen die je gebruikt.</p><a class="business-settings-link" href="#instellingen" data-scroll-target="company-action-settings">${icon('arrow')} Actieknoppen beheren <span>${state.business.profile.actions.length}/3</span></a><a class="business-settings-link" href="#instellingen" data-scroll-target="company-theme-settings">${icon('settings')} Thema aanpassen <span>${html(state.business.theme === 'black' ? 'Donker' : state.business.theme === 'custom' ? 'Eigen kleuren' : 'Wit')}</span></a></section></aside></div>${previewNote()}`;
+    <aside class="business-settings-tools"><section class="card business-settings-panel"><h2>Jouw bedrijfsprofiel</h2><p>Bekijk wat een klant ziet en pas direct je profiel aan.</p><a class="button" href="#bedrijf/studio-noord">Bekijk bedrijfsprofiel ${icon('arrow')}</a><a class="business-settings-link" href="#bedrijf/studio-noord" data-edit-company-profile="true">${icon('business')} Profiel bewerken</a></section><section class="card business-settings-panel"><h2>Snelle instellingen</h2><p>Ga rechtstreeks naar de onderdelen die je gebruikt.</p><a class="business-settings-link" href="#instellingen" data-scroll-target="company-action-settings">${icon('arrow')} Actieknoppen beheren <span>${state.business.profile.actions.length}/3</span></a><a class="business-settings-link" href="#instellingen" data-scroll-target="company-theme-settings">${icon('settings')} Thema aanpassen <span>${html(state.business.theme === 'black' ? 'Donker' : state.business.theme === 'custom' ? 'Eigen kleuren' : 'Wit')}</span></a></section></aside></div>${previewNote()}`);
 }
 
 function renderMessage(message, business) {
@@ -258,8 +243,7 @@ function renderChat(id) {
     return;
   }
   markRead(state, id); persist(false);
-  const muted = mutedChats().includes(id);
-  main.innerHTML = `<section class="chat-panel" style="${themeStyle(businessThemeFor(state, id))}" aria-label="Gesprek met ${html(business.name)}" data-company-id="${id}"><header class="chat-header"><a class="icon-button chat-back" href="#gesprekken" aria-label="Terug naar gesprekken">${icon('back')}</a>${avatar(business)}<div class="chat-identity"><h1 class="chat-business-name">${!isBusiness() && id === 'studio-noord' ? `<a class="company-chat-link" href="#bedrijf/${id}">${html(business.name)}</a>` : html(business.name)}${!isBusiness() && id === 'studio-noord' ? verificationLabel() : ''}</h1><span class="chat-business-detail">${html(business.category)}</span></div><div class="chat-header-actions"><button class="icon-button" data-action="switch-account" aria-label="Wissel van account in dit gesprek">${icon(isBusiness() ? 'business' : 'person')}</button><button class="icon-button" data-action="mute-chat" data-id="${id}" aria-label="${muted ? 'Meldingen voor dit gesprek aanzetten' : 'Meldingen voor dit gesprek uitzetten'}" aria-pressed="${muted}">${icon(muted ? 'bellOff' : 'bell')}</button><button class="icon-button" data-action="business-info" data-id="${id}" aria-label="Over ${html(business.name)}">${icon('info')}</button></div></header><div class="chat-demo-strip">${isBusiness() ? `Zakelijk · ${html(state.business.name)} · ` : ''}Voorbeeldgesprek · berichten blijven lokaal</div><div class="thread" id="message-thread" role="log" aria-label="Berichten" aria-live="off"></div><div class="composer-wrap"><form class="composer" id="reply-form" data-id="${id}"><div class="composer-row"><label class="sr-only" for="reply">${isBusiness() ? 'Inhoud van het bericht' : 'Je reactie'}</label><textarea id="reply" rows="1" placeholder="${'Schrijf een bericht…'}" enterkeyhint="send" aria-describedby="composer-help reply-error">${html(drafts.get(draftKey(id)) || '')}</textarea><button class="button send-button" type="submit" aria-label="${isBusiness() ? 'Bedrijfsbericht lokaal bewaren' : 'Reactie lokaal bewaren'}" disabled>${icon('send')}</button></div></form><div class="composer-help" id="composer-help"><span>${'Alleen lokaal bewaard'} <span class="desktop-hint">· Enter om te versturen</span></span><span class="byte-count" id="byte-count"></span></div><p class="composer-error" id="reply-error" role="alert" hidden></p></div></section>`;
+  main.innerHTML = `<section class="chat-panel" style="${themeStyle(businessThemeFor(state, id))}" aria-label="Gesprek met ${html(business.name)}" data-company-id="${id}"><header class="chat-header"><a class="icon-button chat-back" href="#gesprekken" aria-label="Terug naar gesprekken">${icon('back')}</a>${avatar(business)}<div class="chat-identity"><h1 class="chat-business-name">${!isBusiness() && id === 'studio-noord' ? `<a class="company-chat-link" href="#bedrijf/${id}">${html(business.name)}</a>` : html(business.name)}${!isBusiness() && id === 'studio-noord' ? verificationLabel() : ''}</h1><span class="chat-business-detail">${html(business.category)}</span></div><div class="chat-header-actions"><button class="icon-button" data-action="settings" data-id="${id}" aria-label="Gespreksinstellingen">${icon('settings')}</button></div></header><div class="chat-demo-strip">${isBusiness() ? `Zakelijk · ${html(state.business.name)} · ` : ''}Voorbeeldgesprek · berichten blijven lokaal</div><div class="thread" id="message-thread" role="log" aria-label="Berichten" aria-live="off"></div><div class="composer-wrap"><form class="composer" id="reply-form" data-id="${id}"><div class="composer-row"><label class="sr-only" for="reply">${isBusiness() ? 'Inhoud van het bericht' : 'Je reactie'}</label><textarea id="reply" rows="1" placeholder="${'Schrijf een bericht…'}" enterkeyhint="send" aria-describedby="composer-help reply-error">${html(drafts.get(draftKey(id)) || '')}</textarea><button class="button send-button" type="submit" aria-label="${isBusiness() ? 'Bedrijfsbericht lokaal bewaren' : 'Reactie lokaal bewaren'}" disabled>${icon('send')}</button></div></form><div class="composer-help" id="composer-help"><span>${'Alleen lokaal bewaard'} <span class="desktop-hint">· Enter om te versturen</span></span><span class="byte-count" id="byte-count"></span></div><p class="composer-error" id="reply-error" role="alert" hidden></p></div></section>`;
   const messages = messagesFor(id, state);
   let previousDay = '';
   const thread = document.querySelector('#message-thread');
@@ -295,7 +279,9 @@ function updateComposer() {
 }
 
 function render(focus = false) {
-  const { page, id } = route();
+  let { page, id } = route();
+  const legacySettings=page==='instellingen';
+  if(page==='home'||legacySettings){page='gesprekken';history.replaceState(null,'','#gesprekken');}
   const validChat = page === 'gesprek' && Boolean(contactFor(id));
   const chatCompanyTheme = !isBusiness() && validChat && id === 'studio-noord';
   document.body.classList.toggle('business-theme-active', isBusiness() || chatCompanyTheme);
@@ -311,15 +297,14 @@ function render(focus = false) {
   document.body.classList.toggle('business-dark-theme', (isBusiness() || chatCompanyTheme) && state.business.theme === 'black');
   document.body.classList.toggle('is-chat', validChat);
   if (page === 'gesprekken') renderInbox();
-  else if (page === 'instellingen') renderSettings();
   else if (page === 'gesprek') renderChat(id);
   else if (page === 'bedrijf') renderCompanyProfile(id);
-  else if (isBusiness()) renderBusinessHome();
-  else renderHome();
+  else renderInbox();
+  if(legacySettings||settingsDialog.open)renderSettings(settingsContactId);
   updateNavigation();
   const titles = { home: isBusiness() ? 'Zakelijk' : 'Home', gesprekken: isBusiness() ? 'Klantgesprekken' : 'Gesprekken', instellingen: 'Instellingen', gesprek: contactFor(id)?.name || 'Gesprek', bedrijf: 'Bedrijfsprofiel' };
   document.title = `${titles[page] || 'Home'} · Conappt`;
-  if (focus) main.focus({ preventScroll: true });
+  if (focus && !settingsDialog.open) main.focus({ preventScroll: true });
   if (!validChat) window.scrollTo(0, 0);
 }
 
@@ -379,7 +364,7 @@ document.addEventListener('click', async (event) => {
     const key = preference.dataset.preference;
     state.preferences[key] = !state.preferences[key];
     const saved = persist();
-    renderSettings();
+    renderSettings(settingsContactId);
     document.querySelector(`[data-preference="${key}"]`).focus({ preventScroll: true });
     if (saved) toast('Voorkeur opgeslagen op dit apparaat.');
     return;
@@ -394,7 +379,8 @@ document.addEventListener('click', async (event) => {
   const button = event.target.closest('[data-action]');
   if (!button) return;
   const action = button.dataset.action;
-  if (action === 'switch-account') openAccountSwitcher();
+  if (action === 'settings') renderSettings(button.dataset.id);
+  else if (action === 'switch-account') openAccountSwitcher();
   else if (action === 'toggle-company-profile-edit') {
     if (!isBusiness() || route().page !== 'bedrijf' || route().id !== 'studio-noord') return;
     editingCompanyProfile = !editingCompanyProfile;
@@ -445,7 +431,8 @@ document.addEventListener('click', async (event) => {
     state.mode = mode; query = ''; unreadOnly = false;
     const saved = persist();
     dialog.close();
-    if (location.hash === '#home') render(true); else location.hash = 'home';
+    closeSettings(); settingsContactId=undefined;
+    if (location.hash === '#gesprekken') render(true); else location.hash = 'gesprekken';
     if (saved) toast(mode === 'business' ? `Je gebruikt Conappt nu als ${state.business.name}.` : 'Je persoonlijke inbox staat klaar.');
   } else if (action === 'new-customer') newCustomerDialog();
   else if (action === 'copy-code') await copyCode();
@@ -479,7 +466,8 @@ document.addEventListener('click', async (event) => {
     state = freshState(); drafts.clear(); titleDrafts.clear(); query = ''; unreadOnly = false;
     const saved = persist();
     dialog.close();
-    if (location.hash === '#home') render(true); else location.hash = 'home';
+    closeSettings(); settingsContactId=undefined;
+    if (location.hash === '#gesprekken') render(true); else location.hash = 'gesprekken';
     if (saved) toast('Je voorbeeldomgeving is opnieuw begonnen.');
   } else if (action === 'close-dialog') dialog.close();
 });
@@ -589,6 +577,7 @@ dialog.addEventListener('click', (event) => {
   if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
 });
 window.addEventListener('hashchange', () => render(true));
-if (!location.hash) history.replaceState(null, '', '#home');
+if (!location.hash) history.replaceState(null, '', '#gesprekken');
 render();
 startBenchmarkLabel(document.querySelector('#benchmark-status'));
+

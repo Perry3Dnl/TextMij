@@ -2,7 +2,11 @@
 
 Conappt is a hosted business-to-customer messaging service. Customers receive a contact code without a phone number or email address. A business enters its company name, connects a customer, and sends updates from the app or its own software.
 
-## Current release: 0.14.0
+## Current release: 0.15.0
+
+- Session list as the main screen for both personal and business profiles; rows open a full-screen chat.
+- Account and session settings open in an overlay from the list header, each row or the active chat. QR-code sharing and customer linking remain available above the list.
+- The explicit example environment uses the same navigation; old Home links open the session list.
 
 - Real device and business accounts, authenticated with separate HttpOnly cookies for each role.
 - No required personal details. A business name is sufficient; an optional legacy API email field remains supported.
@@ -77,3 +81,4 @@ Load endpoints require a fresh deployment-only credential transferred over pinne
 ## Release verification
 
 GET **/api/health** identifies the exact running Git revision. GET **/api/ready** checks database readiness. Root HTML contains **conappt-version** and **conappt-revision** meta tags, with no-store caching. Verify both conappt.com and the retained textmij.perry3d.nl hostname against the deployment commit.
+

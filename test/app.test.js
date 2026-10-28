@@ -28,7 +28,7 @@ test('HTTP deployment contract', async (t) => {
     assert.match(response.headers.get('content-security-policy'), /script-src 'self'/);
   });
   await t.test('client assets have correct MIME types and cannot read arbitrary files', async () => {
-    for (const [path, type] of [['/styles.css', 'text/css'], ['/base.css', 'text/css'], ['/app.js', 'text/javascript'], ['/model.js', 'text/javascript'], ['/icon.svg', 'image/svg+xml']]) {
+    for (const [path, type] of [['/styles.css', 'text/css'], ['/base.css', 'text/css'], ['/session-ui.js', 'text/javascript'], ['/app.js', 'text/javascript'], ['/model.js', 'text/javascript'], ['/icon.svg', 'image/svg+xml']]) {
       const response = await fetch(`${origin}${path}`);
       assert.equal(response.status, 200, path);
       assert.ok(response.headers.get('content-type').startsWith(type), path);
@@ -52,3 +52,4 @@ test('HTTP deployment contract', async (t) => {
     assert.equal(response.headers.get('allow'), 'GET, HEAD');
   });
 });
+
