@@ -31,7 +31,7 @@ for(const role of ['personal','business']) {
     await owner.getByRole('button',{name:'Chat opslaan',exact:true}).click();
     const download=await downloadPromise;expect(download.suggestedFilename()).toMatch(/^conappt-gesprek-.*\.txt$/);
     const exported=await readFile(await download.path(),'utf8');expect(exported).toContain('Hallo 😀');expect(exported).toContain('Dank je');expect(exported).not.toContain('Bel vrijdag terug.');
-    await owner.getByRole('button',{name:target+' melden',exact:true}).click();
+    await owner.locator('#settings-dialog').getByRole('button',{name:target+' melden',exact:true}).click();
     await owner.getByLabel('Belediging, intimidatie of bedreiging',{exact:true}).check();
     await owner.getByLabel('Toelichting',{exact:false}).fill('Synthetische testmelding.');
     // Failed transmission must preserve the request and never invent a receipt.

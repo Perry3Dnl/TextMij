@@ -1,3 +1,4 @@
+import { lockConversation } from './conversation-blocks.js';
 import { randomUUID } from 'node:crypto';
 import { httpError,readJson,responseJson } from './http-json.js';
 import { validateReport,USER_REPORT_REASONS } from '../public/report-options.js';
@@ -31,8 +32,8 @@ export class ReportsApi {
     let result,created=false;
     try {
       await connection.beginTransaction();
-      // Serialize reports per account across all API replicas; the budget is persisted in MySQL.
-      await connection.execute('SELECT id FROM accounts WHERE id = ? FOR UPDATE',[reporter.id]);
+      // Serialize each reporter's budget in the same account lock order as sends and blocks.
+      await lockConversation(connection,reporter.id,targetId);
       const [existing]=await connection.execute(
         `SELECT id,${column} AS target_id,reason,details FROM ${table} WHERE reporter_id = ? AND request_id = ?`,
         [reporter.id,requestId]);

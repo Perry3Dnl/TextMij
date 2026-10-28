@@ -152,9 +152,10 @@ assert.equal((await setBlock(recipient,sender,false)).status,200);
 assert.equal((await post('/api/v1/messages',{idempotencyKey:crypto.randomUUID(),envelope},sender.token)).status,202);
 const race=await Promise.all([
   ...Array.from({length:4},()=>post('/api/v1/messages',{idempotencyKey:crypto.randomUUID(),envelope},sender.token)),
-  setBlock(recipient,sender,true)
+  setBlock(recipient,sender,true),
+  post('/api/v1/user-reports',{...userReport,requestId:crypto.randomUUID()},sender.token)
 ]);
-assert.ok(race.slice(0,4).every(r=>[202,403].includes(r.status)));assert.equal(race[4].status,200);
+assert.ok(race.slice(0,4).every(r=>[202,403].includes(r.status)));assert.equal(race[4].status,200);assert.equal(race[5].status,201);
 const [[waiting]]=await database.execute("SELECT COUNT(*) AS total FROM encrypted_messages WHERE status='queued' AND sender_business_id = ? AND recipient_device_id = ?",[sender.accountId,recipient.accountId]);assert.equal(waiting.total,0);
 assert.equal((await post('/api/v1/messages',{idempotencyKey:crypto.randomUUID(),envelope},sender.token)).status,403);
 console.log('Real MySQL user reports, retry safety, blocking, queued-message cancellation and concurrent acceptance passed');
