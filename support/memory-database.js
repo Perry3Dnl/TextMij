@@ -48,7 +48,7 @@ export function memoryDatabase() {
       return [db.accounts.filter(a=>a.id===args[0]&&a.kind==='business'&&db.connections.some(c=>c.business_id===a.id&&c.customer_id===args[1])).map(a=>({display_name:a.display_name}))];
     }
     if(query.startsWith('SELECT id,business_id,reason,details FROM business_reports'))return [db.reports.filter(r=>r.reporter_id===args[0]&&r.request_id===args[1])];
-    if(query.startsWith('SELECT COUNT(*) AS total FROM business_reports'))return [[{total:db.reports.filter(r=>r.reporter_id===args[0]&&r.created_at>Date.now()-86400000).length}]];
+    if(query.startsWith('SELECT COUNT(*) AS total FROM business_reports') && query.includes('reporter_id'))return [[{total:db.reports.filter(r=>r.reporter_id===args[0]&&r.created_at>Date.now()-86400000).length}]];
     if(query.startsWith('INSERT INTO business_reports')) {
       if(db.failReportInsert)throw new Error('Synthetic database failure');
       const [id,reporter_id,business_id,request_id,business_name,reason,details]=args;
