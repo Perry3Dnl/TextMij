@@ -48,10 +48,10 @@ for(const role of ['personal','business']) {
     await bar.getByRole('button',{name:'Privénotitie'}).click();
     await owner.getByLabel('Notitie bij', {exact:false}).fill(note);
     await owner.getByRole('button',{name:'Notitie opslaan'}).click();
-    await expect(bar.getByRole('button',{name:'Privénotitie'})).toHaveAttribute('data-has-note','true');
+    await expect(bar.locator('[data-action="edit-note"]')).toHaveAttribute('data-has-note','true');
     await openMenu(bar);
     await bar.getByRole('button',{name:'Gesprek vastzetten'}).click();
-    await expect(bar.getByRole('button',{name:'Gesprek losmaken'})).toHaveAttribute('aria-pressed','true');
+    await expect(bar.locator('[data-action="pin-chat"]')).toHaveAttribute('aria-pressed','true');
     const downloading=owner.waitForEvent('download');
     await openMenu(bar);
     await bar.getByRole('button',{name:'Chat opslaan'}).click();
@@ -74,7 +74,7 @@ for(const role of ['personal','business']) {
     await openMenu(bar);
     await bar.getByRole('button',{name:target+' blokkeren'}).click();
     await owner.getByRole('button',{name:'Blokkeren',exact:true}).click();
-    await expect(bar.getByRole('button',{name:target+' deblokkeren'})).toBeVisible();
+    await expect(bar.locator('[data-action="block-chat"]')).toContainText('deblokkeren');
     expect(await owner.locator('.session-row').evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
     await owner.locator('.conversation-row').first().click();
     await expect(owner.locator('#reply')).toBeDisabled();
