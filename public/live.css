@@ -284,3 +284,14 @@
     gap:10px;
   }
 }
+
+/* Keep logo preview unobstructed and place controls immediately below it. */
+.live-logo-column{display:flex;flex-direction:column;align-items:stretch;gap:8px;min-width:0}
+.live-logo-column .live-logo-editor{width:100%;aspect-ratio:1}
+.live-logo-column .logo-change-button,.live-logo-column .logo-delete-button{width:100%;min-height:35px;display:flex;gap:5px;align-items:center;justify-content:center;padding:7px 4px;font-size:11px;line-height:1.25;cursor:pointer;text-align:center}
+.live-logo-column .logo-delete-button[hidden]{display:none}
+.live-logo-column .logo-change-button svg,.live-logo-column .logo-delete-button svg{width:13px;height:13px;flex-shrink:0}
+.business-closed-notice{padding:15px;border:1px solid var(--line);background:var(--green-light);border-radius:12px}
+.business-closed-notice p{margin:6px 0 0;font-size:13px}
+.account-closure-settings{border-color:var(--line)}
+@media(max-width:380px){.live-logo-column .logo-change-button,.live-logo-column .logo-delete-button{font-size:10px}}
