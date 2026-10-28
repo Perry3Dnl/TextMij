@@ -81,3 +81,21 @@ The existing deployment script preserves the dedicated MySQL volume and secrets,
 Rollback must preserve all six schemas and their data. The prior application can ignore the new tables; do not reverse migrations by dropping accounts, connections or reports. Off-host encrypted backups, production-scale restore drills and automated retention are not implemented by this change.
 
 CI exercises disposable real MySQL databases, repeated production bootstrap, ciphertext delivery and report storage/authorization/retries. Browser tests separately exercise signup, a real QR decode with simulated camera frames, camera denial/manual entry, message exchange, a failed report request with retained input, and successful server receipt. No production accounts or messages are used as test fixtures.
+
+
+## Conversation actions (0.16.0)
+
+`PUT /api/v1/conversation-block` requires an authenticated role and `{contactId, blocked: boolean}` for an existing connection. Each account controls only its own block. Either account's active block rejects sends in both directions with HTTP 403, excludes that pair from inbox delivery and marks their queued messages as failed. Existing history on either device is retained. Removing your block does not remove the other account's block. Account row locks serialize message acceptance and blocking; clients may show the changed state after their next poll.
+
+`POST /api/v1/user-reports` is for authenticated businesses reporting a connected personal account. Body: `{userId, requestId, reason, details}`. Reasons are impersonation, scam, spam, abuse or other; other requires details. The existing UUID retry contract, maximum 2000 characters, account row lock, ten new reports per rolling day and post-commit receipt apply. Reporter identity and the target name come from server records. No message history or private note is attached. GET is not a report listing API. The existing personal-to-business endpoint remains unchanged.
+
+Authorized database operators can review user reports with:
+
+```sql
+SELECT id, reporter_id, user_id, user_name, reason, details, status, created_at
+FROM user_reports WHERE status = 'open' ORDER BY created_at, id;
+```
+
+Migration 007 adds `account_blocks` and `user_reports`. It preserves the existing accounts, connections, encrypted messages and business reports. The production migration runner verifies old checksums and makes a verified backup before applying a pending migration to an existing database.
+
+Pins and private notes are device-local preferences, scoped to the active account and conversation. Notes are not transmitted to the server or included in chat exports. Chat exports are plain UTF-8 text and contain only messages available on the exporting device; pending messages are marked unconfirmed. Example reports are stored locally in the example state, explicitly labelled as examples, and never sent to moderation.

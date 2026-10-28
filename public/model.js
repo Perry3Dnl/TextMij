@@ -1,3 +1,4 @@
+import { cleanConversationPreferences,previewConversationBlocked } from './conversation-actions.js';
 export const STORAGE_KEY = 'textmij.preview.v1';
 export const VERIFY_PRICE_EUR = 20;
 // Public profile data is deliberately separate from private account credentials.
@@ -137,7 +138,7 @@ export function freshState(now = Date.now()) {
     business: { name: 'Studio Noord', email: 'hallo@studio-noord.example', profile: cleanBusinessProfile(), demoVerification: 'inactive', theme: DEFAULT_BUSINESS_THEME, customTheme: { accent: '#245c91', tint: '#e5f1fc', ink: '#173e65', background: '#ffffff', foreground: '#263326' } },
     preferences: { notifications: true, sound: false, previews: true },
     read: [], readBusiness: [], muted: [], mutedBusiness: [],
-    unreadPersonal: {}, unreadBusiness: {}, customers: [], replies: {},
+    unreadPersonal: {}, unreadBusiness: {}, customers: [], replies: {}, conversationPrefs:{personal:{},business:{}}, exampleReports:[],
   };
 }
 
@@ -168,6 +169,7 @@ export function restoreState(raw, now = Date.now()) {
       }
     }
     const ids = new Set([...contactsFor(state, 'personal'), ...contactsFor(state, 'business')].map((contact) => contact.id));
+    for(const role of ['personal','business'])state.conversationPrefs[role]=cleanConversationPreferences(data.conversationPrefs?.[role],contactsFor(state,role).map(c=>c.id));
     for (const key of Object.keys(state.preferences)) {
       if (typeof data.preferences?.[key] === 'boolean') state.preferences[key] = data.preferences[key];
     }
@@ -187,6 +189,7 @@ export function restoreState(raw, now = Date.now()) {
         return message.from === 'business' ? typeof message.title === 'string' && !validateBusinessMessage(message.title, message.text) : !validateReply(message.text);
       }).map((message, index) => ({ id: `local-${id}-${index}`, from: message.from === 'business' ? 'business' : 'customer', ...(message.from === 'business' ? { title: message.title } : {}), text: message.text, at: message.at, local: true })).slice(-200);
     }
+    if(Array.isArray(data.exampleReports))state.exampleReports=data.exampleReports.filter(r=>ids.has(r?.id)&&['personal','business'].includes(r.role)&&typeof r.reason==='string'&&typeof r.details==='string'&&r.details.length<=2000&&validTime(r.at)).slice(-50);
     return state;
   } catch {
     return fallback;
@@ -236,6 +239,7 @@ export function conversationsFor(state, { query = '', unreadOnly = false } = {})
 }
 
 export function addReply(state, id, text, now = Date.now()) {
+  if(previewConversationBlocked(state,id,'personal'))return 'Dit gesprek is geblokkeerd.';
   if (!businesses.some((business) => business.id === id)) return 'Dit gesprek bestaat niet.';
   const error = validateReply(text);
   if (error) return error;
@@ -248,6 +252,7 @@ export function addReply(state, id, text, now = Date.now()) {
 }
 
 export function addBusinessMessage(state, id, title, text, now = Date.now()) {
+  if(previewConversationBlocked(state,id,'business'))return 'Dit gesprek is geblokkeerd.';
   if (!contactsFor(state, 'business').some((contact) => contact.id === id)) return 'Deze klant bestaat niet.';
   const error = validateBusinessMessage(title, text, MESSAGE_LIMITS.business, false);
   if (error) return error;

@@ -1,4 +1,7 @@
-import { showSettings,closeSettings,settingsDialog } from './session-ui.js';
+import { conversationPreference,conversationExport,downloadConversation,previewConversationBlocked } from './conversation-actions.js';
+import { icon as actionIcon } from './icons.js';
+import { REPORT_REASONS,USER_REPORT_REASONS,validateReport } from './report-options.js';
+import { showSettings,closeSettings,settingsDialog,conversationControls } from './session-ui.js';
 import { startBenchmarkLabel } from './benchmark.js';
 import { optimizeCompanyLogo } from './logo.js';
 import {
@@ -50,6 +53,8 @@ let toastTimer;
 const isBusiness = () => state.mode === 'business';
 const draftKey = (id) => `${state.mode}:${id}`;
 const contactFor = (id) => contactsFor(state).find((contact) => contact.id === id);
+const chatPreference=id=>conversationPreference(state.conversationPrefs[state.mode],id);
+function setChatPreference(id,patch) {state.conversationPrefs[state.mode][id]={...chatPreference(id),...patch};return persist();}
 const mutedChats = () => isBusiness() ? state.mutedBusiness : state.muted;
 
 function toast(message) {
@@ -135,9 +140,9 @@ function dayLabel(timestamp) {
 function conversationRow(business) {
   const last = business.last;
   const outgoing = isBusiness() ? last.from === 'business' : last.from === 'customer';
-  const preview = !business.hasMessages ? 'Nog geen berichten' : `${outgoing ? 'Jij: ' : ''}${last.title || last.text}`;
+  const preview = previewConversationBlocked(state,business.id)?'Geblokkeerd':!business.hasMessages ? 'Nog geen berichten' : `${outgoing ? 'Jij: ' : ''}${last.title || last.text}`;
   return `<div class="session-row"><a class="conversation-row ${business.unread ? 'has-unread' : ''}" href="#gesprek/${business.id}" aria-label="Gesprek met ${html(business.name)}${business.unread ? `, ${business.unread} ongelezen berichten` : ''}">
-    ${avatar(business)}<div class="conversation-copy"><div class="conversation-top"><span class="conversation-name">${html(business.name)}${!isBusiness() && business.id === 'studio-noord' ? verificationLabel() : ''}</span><time class="conversation-time" datetime="${new Date(last.at).toISOString()}">${shortTime(last.at)}</time></div><div class="conversation-bottom"><span class="conversation-preview">${html(preview)}</span>${mutedChats().includes(business.id) ? icon('bellOff', 'muted-icon') : ''}${business.unread ? `<span class="unread-badge" aria-hidden="true">${business.unread}</span>` : ''}</div></div></a><button class="icon-button session-settings" data-action="settings" data-id="${business.id}" aria-label="Instellingen voor ${html(business.name)}">${icon('settings')}</button></div>`;
+    ${avatar(business)}<div class="conversation-copy"><div class="conversation-top"><span class="conversation-name">${html(business.name)}${chatPreference(business.id).pinned?`<span class="conversation-pin" role="img" aria-label="Vastgezet">${actionIcon('pin')}</span>`:''}${!isBusiness() && business.id === 'studio-noord' ? verificationLabel() : ''}</span><time class="conversation-time" datetime="${new Date(last.at).toISOString()}">${shortTime(last.at)}</time></div><div class="conversation-bottom"><span class="conversation-preview">${html(preview)}</span>${mutedChats().includes(business.id) ? icon('bellOff', 'muted-icon') : ''}${business.unread ? `<span class="unread-badge" aria-hidden="true">${business.unread}</span>` : ''}</div></div></a><button class="icon-button session-settings" data-action="settings" data-id="${business.id}" aria-label="Instellingen voor ${html(business.name)}">${icon('settings')}</button></div>`;
 }
 
 function renderInbox() {
@@ -151,7 +156,7 @@ function renderInbox() {
 function updateInboxList() {
   const list = document.querySelector('#conversation-list');
   if (!list) return;
-  const conversations = conversationsFor(state, { query, unreadOnly });
+  const conversations = conversationsFor(state, { query, unreadOnly }).sort((a,b)=>Number(chatPreference(b.id).pinned)-Number(chatPreference(a.id).pinned)||b.last.at-a.last.at);
   const unreadCount = conversationsFor(state, { unreadOnly: true }).length;
   list.innerHTML = conversations.length ? conversations.map(conversationRow).join('') : `<div class="empty-state">${icon(query ? 'search' : 'check')}<h2>${query ? 'Geen gesprekken gevonden' : 'Helemaal bij.'}</h2><p>${query ? `Probeer een andere ${isBusiness() ? 'klantnaam' : 'bedrijfsnaam'}.` : 'Je hebt alle voorbeeldberichten gelezen.'}</p><button class="button secondary" data-action="show-all">Toon alle gesprekken</button></div>`;
   document.querySelector('#inbox-summary').textContent = `${conversations.length} ${conversations.length === 1 ? 'gesprek' : 'gesprekken'} · één gesprek per ${isBusiness() ? 'klant' : 'bedrijf'}`;
@@ -173,7 +178,7 @@ function switchRow(key, title, description) {
 
 function sessionSettingsContent() {
   const item=contactFor(settingsContactId);
-  return (item?`<section class="card settings-card session-context">${avatar(item)}<h3>${html(item.name)}</h3><button class="button secondary" data-action="mute-chat" data-id="${item.id}" aria-pressed="${mutedChats().includes(item.id)}" aria-label="${mutedChats().includes(item.id)?'Meldingen voor dit gesprek aanzetten':'Meldingen voor dit gesprek uitzetten'}">${icon(mutedChats().includes(item.id)?'bellOff':'bell')}</button><a class="button secondary" href="#gesprek/${item.id}">Open gesprek</a> <button class="button secondary" data-action="business-info" data-id="${item.id}">${icon('info')} Over dit gesprek</button></section>`:'');
+  return (item?`<section class="card settings-card session-context">${avatar(item)}<h3>${html(item.name)}</h3><button class="button secondary" data-action="mute-chat" data-id="${item.id}" aria-pressed="${mutedChats().includes(item.id)}" aria-label="${mutedChats().includes(item.id)?'Meldingen voor dit gesprek aanzetten':'Meldingen voor dit gesprek uitzetten'}">${icon(mutedChats().includes(item.id)?'bellOff':'bell')}</button><a class="button secondary" href="#gesprek/${item.id}">Open gesprek</a> <button class="button secondary" data-action="business-info" data-id="${item.id}">${icon('info')} Over dit gesprek</button></section>`+conversationControls({id:item.id,...chatPreference(item.id),targetKind:isBusiness()?'personal':'business'}):'');
 }
 
 function accountSettingsContent() {
@@ -252,7 +257,7 @@ function renderChat(id) {
     return;
   }
   markRead(state, id); persist(false);
-  main.innerHTML = `<section class="chat-panel" style="${themeStyle(businessThemeFor(state, id))}" aria-label="Gesprek met ${html(business.name)}" data-company-id="${id}"><header class="chat-header"><a class="icon-button chat-back" href="#gesprekken" aria-label="Terug naar gesprekken">${icon('back')}</a>${avatar(business)}<div class="chat-identity"><h1 class="chat-business-name">${!isBusiness() && id === 'studio-noord' ? `<a class="company-chat-link" href="#bedrijf/${id}">${html(business.name)}</a>` : html(business.name)}${!isBusiness() && id === 'studio-noord' ? verificationLabel() : ''}</h1><span class="chat-business-detail">${html(business.category)}</span></div><div class="chat-header-actions"><button class="icon-button" data-action="settings" data-id="${id}" aria-label="Gespreksinstellingen">${icon('settings')}</button></div></header><div class="chat-demo-strip">${isBusiness() ? `Zakelijk · ${html(state.business.name)} · ` : ''}Voorbeeldgesprek · berichten blijven lokaal</div><div class="thread" id="message-thread" role="log" aria-label="Berichten" aria-live="off"></div><div class="composer-wrap"><form class="composer" id="reply-form" data-id="${id}"><div class="composer-row"><label class="sr-only" for="reply">${isBusiness() ? 'Inhoud van het bericht' : 'Je reactie'}</label><textarea id="reply" rows="1" placeholder="${'Schrijf een bericht…'}" enterkeyhint="send" aria-describedby="composer-help reply-error">${html(drafts.get(draftKey(id)) || '')}</textarea><button class="button send-button" type="submit" aria-label="${isBusiness() ? 'Bedrijfsbericht lokaal bewaren' : 'Reactie lokaal bewaren'}" disabled>${icon('send')}</button></div></form><div class="composer-help" id="composer-help"><span>${'Alleen lokaal bewaard'} <span class="desktop-hint">· Enter om te versturen</span></span><span class="byte-count" id="byte-count"></span></div><p class="composer-error" id="reply-error" role="alert" hidden></p></div></section>`;
+  main.innerHTML = `<section class="chat-panel" style="${themeStyle(businessThemeFor(state, id))}" aria-label="Gesprek met ${html(business.name)}" data-company-id="${id}"><header class="chat-header"><a class="icon-button chat-back" href="#gesprekken" aria-label="Terug naar gesprekken">${icon('back')}</a>${avatar(business)}<div class="chat-identity"><h1 class="chat-business-name">${!isBusiness() && id === 'studio-noord' ? `<a class="company-chat-link" href="#bedrijf/${id}">${html(business.name)}</a>` : html(business.name)}${!isBusiness() && id === 'studio-noord' ? verificationLabel() : ''}</h1><span class="chat-business-detail">${html(business.category)}</span></div><div class="chat-header-actions"><button class="icon-button" data-action="settings" data-id="${id}" aria-label="Gespreksinstellingen">${icon('settings')}</button></div></header><div class="chat-demo-strip">${isBusiness() ? `Zakelijk · ${html(state.business.name)} · ` : ''}Voorbeeldgesprek · berichten blijven lokaal</div><p class="conversation-block-notice" role="status" ${previewConversationBlocked(state,id)?'':'hidden'}>Dit gesprek is geblokkeerd. Nieuwe berichten zijn niet beschikbaar.</p><div class="thread" id="message-thread" role="log" aria-label="Berichten" aria-live="off"></div><div class="composer-wrap"><form class="composer" id="reply-form" data-id="${id}"><div class="composer-row"><label class="sr-only" for="reply">${isBusiness() ? 'Inhoud van het bericht' : 'Je reactie'}</label><textarea id="reply" rows="1" placeholder="${'Schrijf een bericht…'}" enterkeyhint="send" aria-describedby="composer-help reply-error">${html(drafts.get(draftKey(id)) || '')}</textarea><button class="button send-button" type="submit" aria-label="${isBusiness() ? 'Bedrijfsbericht lokaal bewaren' : 'Reactie lokaal bewaren'}" disabled>${icon('send')}</button></div></form><div class="composer-help" id="composer-help"><span>${'Alleen lokaal bewaard'} <span class="desktop-hint">· Enter om te versturen</span></span><span class="byte-count" id="byte-count"></span></div><p class="composer-error" id="reply-error" role="alert" hidden></p></div></section>`;
   const messages = messagesFor(id, state);
   let previousDay = '';
   const thread = document.querySelector('#message-thread');
@@ -270,6 +275,7 @@ function renderChat(id) {
 function updateComposer() {
   const input = document.querySelector('#reply');
   if (!input) return;
+  const blocked=previewConversationBlocked(state,route().id);input.disabled=blocked;
   const title = '';
   const limit = isBusiness() ? MESSAGE_LIMITS.business : MESSAGE_LIMITS.customer;
   const size = byteLength(input.value) + (isBusiness() ? byteLength(title) : 0);
@@ -279,7 +285,7 @@ function updateComposer() {
   counter.classList.toggle('over-limit', over);
   input.setAttribute('aria-invalid', String(over));
   document.querySelector('#message-title')?.setAttribute('aria-invalid', String(over));
-  document.querySelector('.send-button').disabled = Boolean(isBusiness() ? validateBusinessMessage(title, input.value, MESSAGE_LIMITS.business, false) : validateReply(input.value));
+  document.querySelector('.send-button').disabled = blocked || Boolean(isBusiness() ? validateBusinessMessage(title, input.value, MESSAGE_LIMITS.business, false) : validateReply(input.value));
   input.style.height = 'auto';
   input.style.height = `${Math.min(input.scrollHeight + 2, 140)}px`;
   const error = document.querySelector('#reply-error');
@@ -328,6 +334,12 @@ function openDialog(content) {
 function openAccountSwitcher() {
   const choice = (mode, name, detail, symbol) => `<button class="account-choice ${state.mode === mode ? 'selected' : ''}" type="button" data-action="choose-account" data-mode="${mode}" aria-pressed="${state.mode === mode}"><span class="account-choice-icon">${mode === 'business' && state.business.profile.logo ? companyLogo('account-logo-image') : icon(symbol)}</span><span class="account-choice-copy"><strong>${html(name)}</strong><small>${detail}</small></span>${state.mode === mode ? icon('check') : ''}</button>`;
   openDialog(`<h2>Wissel van account</h2><p>Voor jezelf of voor je bedrijf. Je gebruikt gewoon dezelfde app.</p><div class="account-choices">${choice('personal', state.name, 'Persoonlijk profiel', 'person')}${choice('business', state.business.name, 'Zakelijk profiel · voorbeeld', 'business')}</div><p class="dialog-note">Deze voorbeeldaccounts staan alleen op dit apparaat.</p><div class="dialog-actions"><button class="button secondary" data-action="close-dialog">Sluiten</button></div>`);
+}
+
+function previewReport(id) {
+  const item=contactFor(id);if(!item)return;
+  const reasons=isBusiness()?USER_REPORT_REASONS:REPORT_REASONS;
+  openDialog(`<h2>${isBusiness()?'Gebruiker melden':'Bedrijf melden'}</h2><p>Voorbeeldmelding over ${html(item.name)}. Er wordt niets naar Conappt of je contact verstuurd.</p><form id="preview-report-form" data-id="${id}"><fieldset class="report-reasons"><legend>Wat is er aan de hand?</legend>${reasons.map(r=>`<label class="report-reason"><input type="radio" name="reason" value="${r.id}" required>${html(r.label)}</label>`).join('')}</fieldset><label class="field-label" for="preview-report-details">Toelichting</label><textarea class="text-input" id="preview-report-details" name="details" rows="3" maxlength="2000"></textarea><p class="form-error" data-error hidden></p><div class="dialog-actions"><button class="button secondary" type="button" data-action="close-dialog">Annuleren</button><button class="button" type="submit">Voorbeeldmelding opslaan</button></div></form>`);
 }
 
 function newCustomerDialog() {
@@ -388,7 +400,20 @@ document.addEventListener('click', async (event) => {
   const button = event.target.closest('[data-action]');
   if (!button) return;
   const action = button.dataset.action;
-  if (action === 'settings') renderSettings(button.dataset.id);
+  if(action==='pin-chat') {
+    const saved=setChatPreference(button.dataset.id,{pinned:!chatPreference(button.dataset.id).pinned});render();
+    if(saved)toast('Voorkeur opgeslagen.');
+  } else if(action==='export-chat') {
+    const id=button.dataset.id,item=contactFor(id);if(!item)return;
+    downloadConversation(id,conversationExport({ownName:isBusiness()?state.business.name:state.name,contactName:item.name,messages:messagesFor(id,state).map(m=>({...m,own:m.from===(isBusiness()?'business':'customer')}))}));
+  } else if(action==='block-chat') {
+    const id=button.dataset.id,blocked=chatPreference(id).blocked;
+    openDialog(`<h2>${blocked?'Contact deblokkeren?':'Contact blokkeren?'}</h2><p>${blocked?'Sta berichten in dit voorbeeld weer toe.':'Stop berichten in dit voorbeeldgesprek. Je bestaande geschiedenis blijft bewaard.'}</p><div class="dialog-actions"><button class="button secondary" data-action="close-dialog">Annuleren</button><button class="button" data-action="confirm-preview-block" data-id="${id}" data-blocked="${!blocked}">${blocked?'Deblokkeren':'Blokkeren'}</button></div>`);
+  } else if(action==='confirm-preview-block') {
+    const saved=setChatPreference(button.dataset.id,{blocked:button.dataset.blocked==='true'});dialog.close();render();
+    if(saved)toast('Gespreksvoorkeur opgeslagen.');
+  } else if(action==='report')previewReport(button.dataset.id);
+  else if (action === 'settings') renderSettings(button.dataset.id);
   else if (action === 'switch-account') openAccountSwitcher();
   else if (action === 'toggle-company-profile-edit') {
     if (!isBusiness() || route().page !== 'bedrijf' || route().id !== 'studio-noord') return;
@@ -507,6 +532,18 @@ document.addEventListener('input', (event) => {
 });
 
 document.addEventListener('submit', (event) => {
+  if(event.target.id==='conversation-note-form') {
+    event.preventDefault();
+    if(setChatPreference(event.target.dataset.id,{note:new FormData(event.target).get('note')}))toast('Privénotitie opgeslagen.');
+    return;
+  }
+  if(event.target.id==='preview-report-form') {
+    event.preventDefault();const form=event.target,data=new FormData(form),error=validateReport(data.get('reason'),data.get('details'));
+    if(error){const line=form.querySelector('[data-error]');line.textContent=error;line.hidden=false;return;}
+    state.exampleReports=[...(state.exampleReports||[]),{id:form.dataset.id,role:state.mode,reason:data.get('reason'),details:data.get('details'),at:Date.now()}].slice(-50);
+    if(persist()){dialog.close();toast('Voorbeeldmelding lokaal bewaard. Er is niets verstuurd.');}return;
+  }
+
   if (event.target.id === 'company-public-form') {
     event.preventDefault();
     if (!isBusiness()) return;

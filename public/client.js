@@ -1,3 +1,4 @@
+import { conversationPreference } from './conversation-actions.js';
 import { deviceGet,deviceSet } from './device-store.js';
 import { generateDeviceKeyPair,exportDevicePublicKey,encryptForRecipient,decryptFromSender } from './crypto.js';
 import { validateBusinessMessage,validateReply } from './model.js';
@@ -19,7 +20,7 @@ export class ConapptClient {
     } catch { throw new Error('Geen verbinding. Je kunt het opnieuw proberen zodra je online bent.'); }
     const result=await response.json();
     if (!response.ok) {
-      const messages={401:'Dit profiel is niet aangemeld op dit apparaat.',404:'Deze Conappt-code is niet gevonden.',429:'Er zijn te veel profielen kort na elkaar aangemaakt. Probeer later opnieuw.',503:'Conappt is tijdelijk niet bereikbaar. Probeer het zo opnieuw.'};
+      const messages={401:'Dit profiel is niet aangemeld op dit apparaat.',404:'Deze Conappt-code is niet gevonden.',429:result.error||'Te veel aanvragen. Probeer later opnieuw.',503:'Conappt is tijdelijk niet bereikbaar. Probeer het zo opnieuw.'};
       throw Object.assign(new Error(messages[response.status]||result.error||'Dit is niet gelukt.'),{status:response.status});
     }
     return result;
@@ -55,6 +56,7 @@ export class ConapptClient {
   async activate(role,account,keys) {
     if(account.publicKey!==await exportDevicePublicKey(keys.publicKey))
       throw new Error('De apparaatsleutel hoort niet bij dit profiel. Open Conappt op het oorspronkelijke apparaat.');
+    this.contactsVersion=(this.contactsVersion||0)+1;
     this.role=role;this.account=account;this.profiles[role]=account;this.keys=keys;this.contacts=[];
     await deviceSet('public-profile:'+role,account);
     this.history=await deviceGet('history:'+account.accountId)||{messages:[],cursor:'0',read:{},pending:[]};
@@ -67,14 +69,14 @@ export class ConapptClient {
   async sync() {
     if(!this.account || this.busy) return false;
     this.busy=true;
-    const account=this.account,role=this.role,history=this.history;
+    const account=this.account,role=this.role,history=this.history,contactsVersion=this.contactsVersion||0;
     try {
       const [connections,inbox]=await Promise.all([
         this.request('connections',{role}),this.request('messages?after='+history.cursor,{role})
       ]);
       if(this.account.accountId!==account.accountId) return false;
-      let changed=JSON.stringify(this.contacts)!==JSON.stringify(connections.contacts);
-      this.contacts=connections.contacts;
+      let changed=false;
+      if(contactsVersion===(this.contactsVersion||0)){changed=JSON.stringify(this.contacts)!==JSON.stringify(connections.contacts);this.contacts=connections.contacts;}
       const keys=this.keys;
       for(const item of inbox.messages) {
         if(!history.messages.some(message=>message.id==='received-'+item.id)) {
@@ -96,6 +98,20 @@ export class ConapptClient {
     this.contacts=contacts.contacts;
     return result.contact.accountId;
   }
+  preferences(id) {return conversationPreference(this.history.conversationPrefs,id);}
+  async updateConversation(id,patch) {
+    if(!this.contacts.some(c=>c.accountId===id))throw new Error('Gesprek niet gevonden.');
+    const previous=this.history.conversationPrefs;
+    this.history.conversationPrefs={...previous,[id]:{...this.preferences(id),...patch}};
+    try {await this.saveHistory();}catch(error){this.history.conversationPrefs=previous;throw error;}
+  }
+  async block(id,blocked) {
+    this.contactsVersion=(this.contactsVersion||0)+1;
+    const role=this.role,accountId=this.account.accountId;
+    await this.request('conversation-block',{method:'PUT',role,body:{contactId:id,blocked}});
+    const result=await this.request('connections',{role});
+    if(this.account.accountId===accountId){this.contactsVersion++;this.contacts=result.contacts;}
+  }
   async update(patch) {
     const previous=this.account;
     const updated=await this.request('profile',{method:'PUT',body:{...previous,...patch}});
@@ -108,6 +124,7 @@ export class ConapptClient {
     const error=this.role==='business'?validateBusinessMessage(title,text,undefined,false):validateReply(text);
     if(error) throw new Error(error);
     const contact=this.contacts.find(item=>item.accountId===contactId);
+    if(contact?.messagingBlocked)throw new Error('Dit gesprek is geblokkeerd.');
     if(!contact) throw new Error('Dit gesprek is niet gevonden. Open je gesprekken opnieuw.');
     const account=this.account,role=this.role,history=this.history;
     let pending=pendingId ? history.pending.find(item=>item.id===pendingId) : history.pending.find(item=>item.contactId===contactId && item.title===title && item.text===text);

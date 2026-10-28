@@ -51,7 +51,7 @@ networks:
 YAML
 docker network create textmij-ci-messaging-proxy >/dev/null
 "${db[@]}" up -d --wait --wait-timeout 180
-for sql in deploy/sql/00{1,2,3,4,5,6}_*.sql; do
+for sql in deploy/sql/00{1,2,3,4,5,6,7}_*.sql; do
   # shellcheck disable=SC2016 # Expand inside the isolated test MySQL container.
   "${db[@]}" exec -T mysql sh -c 'MYSQL_PWD="$(cat /run/secrets/mysql_root_password)" exec mysql -uroot textmij' < "$sql"
 done
@@ -122,6 +122,42 @@ for(let i=0;i<9;i++)assert.equal((await post('/api/v1/business-reports',{...repo
 assert.equal((await post('/api/v1/business-reports',{...reportBody,requestId:crypto.randomUUID()},recipient.token)).status,429);
 const [[count]]=await database.execute('SELECT COUNT(*) AS total FROM business_reports WHERE reporter_id = ?',[recipient.accountId]);
 assert.equal(count.total,10);
+// Conversation actions exercise real MySQL authorization, transactions and delivery filters.
+const userReport={userId:recipient.accountId,requestId:crypto.randomUUID(),reason:'abuse',details:'Synthetic user report'};
+const reported=await post('/api/v1/user-reports',userReport,sender.token);
+assert.equal(reported.status,201);
+const userReceipt=await reported.json();
+assert.equal((await post('/api/v1/user-reports',userReport,sender.token)).status,200);
+assert.equal((await post('/api/v1/user-reports',{...userReport,details:'Conflict'},sender.token)).status,409);
+assert.equal((await post('/api/v1/user-reports',userReport,recipient.token)).status,403);
+const [[storedUser]]=await database.execute('SELECT reporter_id,user_id,user_name,reason,details FROM user_reports WHERE id = ?',[userReceipt.reportId]);
+assert.deepEqual(storedUser,{reporter_id:sender.accountId,user_id:recipient.accountId,user_name:'Integration User',reason:'abuse',details:'Synthetic user report'});
+const setBlock=(account,target,blocked)=>fetch(url+'/api/v1/conversation-block',{method:'PUT',headers:{'content-type':'application/json',authorization:'Bearer '+account.token},body:JSON.stringify({contactId:target.accountId,blocked})});
+// Hold only this disposable test scheduler so a newly queued message cannot dispatch before blocking.
+const scheduler=await database.getConnection();
+try {
+  const [[lease]]=await scheduler.query("SELECT GET_LOCK('textmij_outbox_dispatch_v1',5) AS locked");assert.equal(lease.locked,1);
+  const pending=await post('/api/v1/messages',{idempotencyKey:crypto.randomUUID(),envelope},sender.token);assert.equal(pending.status,202);
+  const pendingId=(await pending.json()).messageId;
+  assert.equal((await setBlock(recipient,sender,true)).status,200);
+  const [[pendingRow]]=await database.execute('SELECT status FROM encrypted_messages WHERE id = ?',[pendingId]);assert.equal(pendingRow.status,'failed');
+} finally {await scheduler.query("SELECT RELEASE_LOCK('textmij_outbox_dispatch_v1')");scheduler.release();}
+assert.equal((await post('/api/v1/messages',{idempotencyKey:crypto.randomUUID(),envelope},sender.token)).status,403);
+const reverse=await encryptForRecipient({senderId:recipient.accountId,recipientId:sender.accountId,recipientPublicKey:publicA,title:'',text:'Blocked reverse',allowEmptyTitle:true});
+assert.equal((await post('/api/v1/messages',{idempotencyKey:crypto.randomUUID(),envelope:reverse},recipient.token)).status,403);
+const hidden=await fetch(url+'/api/v1/messages',{headers:{authorization:'Bearer '+recipient.token}});assert.deepEqual((await hidden.json()).messages,[]);
+assert.equal((await setBlock(sender,recipient,false)).status,200);
+assert.equal((await post('/api/v1/messages',{idempotencyKey:crypto.randomUUID(),envelope},sender.token)).status,403);
+assert.equal((await setBlock(recipient,sender,false)).status,200);
+assert.equal((await post('/api/v1/messages',{idempotencyKey:crypto.randomUUID(),envelope},sender.token)).status,202);
+const race=await Promise.all([
+  ...Array.from({length:4},()=>post('/api/v1/messages',{idempotencyKey:crypto.randomUUID(),envelope},sender.token)),
+  setBlock(recipient,sender,true)
+]);
+assert.ok(race.slice(0,4).every(r=>[202,403].includes(r.status)));assert.equal(race[4].status,200);
+const [[waiting]]=await database.execute("SELECT COUNT(*) AS total FROM encrypted_messages WHERE status='queued' AND sender_business_id = ? AND recipient_device_id = ?",[sender.accountId,recipient.accountId]);assert.equal(waiting.total,0);
+assert.equal((await post('/api/v1/messages',{idempotencyKey:crypto.randomUUID(),envelope},sender.token)).status,403);
+console.log('Real MySQL user reports, retry safety, blocking, queued-message cancellation and concurrent acceptance passed');
 await database.end();
 console.log('MySQL, authentication, encryption, links, profiles, private reports, retry safety and rate limits passed');
 JS

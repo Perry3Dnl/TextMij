@@ -1,0 +1,85 @@
+import {test,expect} from 'playwright/test';
+import {readFile} from 'node:fs/promises';
+
+test.beforeEach(async({request})=>{await request.post('/__test/reset');});
+for(const role of ['personal','business']) {
+  test(`${role} can pin, keep a private note, export, report, block and unblock`,async({browser,request},testInfo)=>{
+    const contexts=await Promise.all([browser.newContext({viewport:{width:320,height:844},acceptDownloads:true}),browser.newContext({viewport:{width:390,height:844},acceptDownloads:true})]);
+    const [user,business]=await Promise.all(contexts.map(c=>c.newPage()));
+    const errors=[];for(const page of [user,business])page.on('pageerror',e=>errors.push(e.message));
+    await user.goto('/');await user.getByRole('button',{name:/Maak mijn code/}).click();
+    const code=(await user.locator('.live-device-code').innerText()).trim();
+    await business.goto('/');await business.getByLabel('Bedrijfsnaam',{exact:true}).fill('Actie Testbedrijf');await business.getByRole('button',{name:/Start je bedrijf/}).click();
+    await business.getByRole('button',{name:'Klant verbinden',exact:true}).click();
+    await business.getByLabel('Conappt-code',{exact:true}).fill(code);await business.getByRole('button',{name:'Verbinden',exact:true}).click();
+    await business.locator('#reply').fill('Hallo 😀');await business.getByRole('button',{name:'Bericht versturen'}).click();
+    await expect(user.locator('.conversation-row')).toHaveCount(1);await user.locator('.conversation-row').click();
+    await expect(user.locator('#message-thread')).toContainText('Hallo 😀');
+    await user.locator('#reply').fill('Dank je');await user.getByRole('button',{name:'Bericht versturen'}).click();
+    await expect(business.locator('#message-thread')).toContainText('Dank je');
+    const owner=role==='personal'?user:business,peer=role==='personal'?business:user;
+    const target=role==='personal'?'Bedrijf':'Gebruiker';
+    const note='Privé <notitie> 😀\nBel vrijdag terug.';
+    await owner.locator('#reply').fill('Mijn concept');
+    await owner.getByRole('button',{name:'Gespreksinstellingen',exact:true}).click();
+    await owner.getByLabel('Privénotitie',{exact:true}).fill(note);
+    await owner.getByRole('button',{name:'Notitie opslaan',exact:true}).click();
+    await owner.getByRole('button',{name:'Gesprek vastzetten',exact:true}).click();
+    await expect(owner.getByRole('button',{name:'Gesprek losmaken',exact:true})).toHaveAttribute('aria-pressed','true');
+    await expect(owner.getByLabel('Privénotitie',{exact:true})).toHaveValue(note);
+    const downloadPromise=owner.waitForEvent('download');
+    await owner.getByRole('button',{name:'Chat opslaan',exact:true}).click();
+    const download=await downloadPromise;expect(download.suggestedFilename()).toMatch(/^conappt-gesprek-.*\.txt$/);
+    const exported=await readFile(await download.path(),'utf8');expect(exported).toContain('Hallo 😀');expect(exported).toContain('Dank je');expect(exported).not.toContain('Bel vrijdag terug.');
+    await owner.getByRole('button',{name:target+' melden',exact:true}).click();
+    await owner.getByLabel('Belediging, intimidatie of bedreiging',{exact:true}).check();
+    await owner.getByLabel('Toelichting',{exact:false}).fill('Synthetische testmelding.');
+    // Failed transmission must preserve the request and never invent a receipt.
+    const endpoint=role==='business'?'user-reports':'business-reports';
+    await owner.route('**/api/v1/'+endpoint,route=>route.abort());
+    await owner.getByRole('button',{name:'Melding versturen',exact:true}).click();
+    await expect(owner.locator('#report-form [data-error]')).toContainText('Geen verbinding');
+    await owner.unroute('**/api/v1/'+endpoint);
+    await owner.getByRole('button',{name:'Melding versturen',exact:true}).click();
+    await expect(owner.getByRole('heading',{name:'Melding ontvangen',exact:true})).toBeVisible();
+    const reports=await(await request.get(role==='business'?'/__test/user-reports':'/__test/reports')).json();expect(reports).toHaveLength(1);expect(reports[0].details).toBe('Synthetische testmelding.');
+    await owner.getByRole('button',{name:'Klaar',exact:true}).click();
+    await owner.getByRole('button',{name:target+' blokkeren',exact:true}).click();
+    await owner.getByRole('button',{name:'Blokkeren',exact:true}).click();
+    await expect(owner.getByRole('button',{name:target+' deblokkeren',exact:true})).toBeVisible();
+    await owner.screenshot({path:testInfo.outputPath(role+'-actions.png')});
+    expect(await owner.locator('#settings-dialog').evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
+    await owner.getByRole('button',{name:'Instellingen sluiten'}).click();
+    await expect(owner.locator('#reply')).toBeDisabled();await expect(owner.locator('#reply')).toHaveValue('Mijn concept');
+    await expect(peer.locator('#reply')).toBeDisabled();
+    await peer.getByRole('button',{name:'Gespreksinstellingen',exact:true}).click();
+    await expect(peer.getByLabel('Privénotitie',{exact:true})).toHaveValue('');
+    await expect(peer.getByRole('button',{name:'Gesprek vastzetten',exact:true})).toBeVisible();
+    await peer.getByRole('button',{name:'Instellingen sluiten'}).click();
+    await owner.reload();await expect(owner.locator('#reply')).toBeDisabled();
+    await owner.getByRole('button',{name:'Gespreksinstellingen',exact:true}).click();
+    await expect(owner.getByLabel('Privénotitie',{exact:true})).toHaveValue(note);
+    await expect(owner.getByRole('button',{name:'Gesprek losmaken',exact:true})).toBeVisible();
+    await owner.getByRole('button',{name:target+' deblokkeren',exact:true}).click();await owner.getByRole('button',{name:'Deblokkeren',exact:true}).click();
+    await owner.getByRole('button',{name:'Instellingen sluiten'}).click();
+    await expect(owner.locator('#reply')).toBeEnabled();await expect(peer.locator('#reply')).toBeEnabled();
+    await owner.getByRole('link',{name:'Terug naar gesprekken'}).click();await expect(owner.locator('.conversation-pin')).toHaveCount(1);
+    expect(errors).toEqual([]);await Promise.all(contexts.map(c=>c.close()));
+  });
+}
+
+test('example pins reorder sessions, notes persist, exports download, and blocking stays scoped',async({page})=>{
+  await page.setViewportSize({width:390,height:844});await page.goto('/?preview=1');
+  const last=page.locator('.session-row').last();const href=await last.locator('.conversation-row').getAttribute('href');
+  await last.getByRole('button',{name:/Instellingen voor/}).click();
+  await page.getByLabel('Privénotitie',{exact:true}).fill('Voorbeeldnotitie');await page.getByRole('button',{name:'Notitie opslaan',exact:true}).click();
+  await page.getByRole('button',{name:'Gesprek vastzetten',exact:true}).click();await page.getByRole('button',{name:'Instellingen sluiten'}).click();
+  await expect(page.locator('.conversation-row').first()).toHaveAttribute('href',href);
+  await page.reload();await page.locator('.session-row [data-action="settings"]').first().click();await expect(page.getByLabel('Privénotitie',{exact:true})).toHaveValue('Voorbeeldnotitie');
+  const downloading=page.waitForEvent('download');await page.getByRole('button',{name:'Chat opslaan',exact:true}).click();expect((await downloading).suggestedFilename()).toMatch(/\.txt$/);
+  await page.getByRole('button',{name:'Bedrijf blokkeren',exact:true}).click();await page.getByRole('button',{name:'Blokkeren',exact:true}).click();
+  await page.getByRole('link',{name:'Open gesprek',exact:true}).click();await expect(page.locator('#reply')).toBeDisabled();
+  await page.getByRole('button',{name:'Gespreksinstellingen',exact:true}).click();await page.getByRole('button',{name:'Bedrijf deblokkeren',exact:true}).click();await page.getByRole('button',{name:'Deblokkeren',exact:true}).click();
+  await page.getByRole('button',{name:'Bedrijf melden',exact:true}).click();await page.getByLabel('Spam of ongewenste reclame',{exact:true}).check();await page.getByRole('button',{name:'Voorbeeldmelding opslaan',exact:true}).click();
+  await expect(page.locator('#toast')).toContainText('Er is niets verstuurd.');
+});

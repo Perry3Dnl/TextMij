@@ -29,6 +29,8 @@ if (process.env.TEXTMIJ_MESSAGING_ENABLED === '1') {
     await pool.query('SELECT account_id FROM business_profiles LIMIT 0');
     await pool.query('SELECT business_id,customer_id FROM connections LIMIT 0');
     await pool.query('SELECT id,status FROM business_reports LIMIT 0');
+    await pool.query('SELECT id,status FROM user_reports LIMIT 0');
+    await pool.query('SELECT blocker_id,blocked_id FROM account_blocks LIMIT 0');
     messaging = new MessagingApi(pool);
     dispatcher = new DurableDispatcher(pool);
   } catch (e) { await pool.end(); throw e; }
