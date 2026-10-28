@@ -234,7 +234,7 @@ function editQuickMessage(key) {
 function profileEditor(item,p) {
   logoDraft=p.logo;
   main.innerHTML='<div class="company-profile-toolbar"><h1>Je bedrijfsprofiel</h1>'+button('Annuleren','cancel-edit','',true)+'</div><form id="company-profile-form" class="company-profile-form"><section class="card company-editor-panel">'+
-    '<div class="live-brand-editor"><div class="live-logo-column"><label class="live-logo-editor" for="company-logo">'+avatar(item,'company-logo-fallback')+'<input id="company-logo" type="file" accept="image/*" class="sr-only"></label><label class="button secondary logo-change-button" for="company-logo">'+icon('edit')+' Logo wijzigen</label><button type="button" class="button secondary logo-delete-button" data-action="remove-logo" '+(logoDraft?'':'hidden')+'>'+icon('trash-2')+' Verwijderen</button></div><div>'+field('company-name','Bedrijfsnaam',item.name,'text','maxlength="80" required')+
+    '<div class="live-brand-editor"><div class="live-logo-column"><label class="live-logo-editor" for="company-logo">'+avatar(item,'company-logo-fallback')+'<input id="company-logo" type="file" accept="image/*" class="sr-only"></label><details class="logo-actions"><summary aria-label="Logo-opties" title="Logo-opties">⋯</summary><div class="logo-actions-panel"><label class="button secondary logo-change-button" for="company-logo">'+icon('edit')+' Logo wijzigen</label><button type="button" class="button secondary logo-delete-button" data-action="remove-logo" '+(logoDraft?'':'hidden')+'>'+icon('trash-2')+' Logo verwijderen</button></div></details></div><div>'+field('company-name','Bedrijfsnaam',item.name,'text','maxlength="80" required')+
     '<label class="field-label" for="company-description">Beschrijving</label><textarea class="text-input" id="company-description" name="description" rows="4" maxlength="500">'+html(p.description)+'</textarea></div></div><p class="field-help" id="logo-feedback">Afbeeldingen worden vierkant uitgesneden en verkleind tot maximaal 100 KB</p>'+'</section>'+
     '<details class="card company-editor-panel"><summary>Contactgegevens</summary>'+field('company-phone','Telefoonnummer (optioneel)',p.phone)+field('company-website','Website (optioneel)',p.website,'url')+
     ['instagram','facebook','linkedin'].map(key=>field('social-'+key,key,p.socials[key],'url')).join('')+'</details>'+
@@ -349,6 +349,8 @@ async function switchRole(role) {
   if(dialog.open)dialog.close();closeSettings();settingsContactId=undefined;query='';editing=false;go('gesprekken');render();
 }
 document.addEventListener('click',async event=>{
+  const logoMenu=document.querySelector('.logo-actions[open]');
+  if(logoMenu&&!logoMenu.contains(event.target))logoMenu.open=false;
   const el=event.target.closest('[data-action]');if(!el||el.disabled)return;
   const action=el.dataset.action;
   try {
@@ -443,6 +445,7 @@ document.addEventListener('click',async event=>{
       preview.querySelector('.avatar')?.remove();
       const initials=document.createElement('span');initials.className='avatar company-logo-fallback';initials.textContent=(client.account.name||'B').charAt(0).toUpperCase();preview.prepend(initials);
       document.querySelector('.logo-delete-button').hidden=true;
+      document.querySelector('.logo-actions').open=false;
       document.querySelector('#logo-feedback').textContent='Logo wordt verwijderd zodra je opslaat.';
     }
     else if(action==='close-business-dialog'){
@@ -464,6 +467,12 @@ document.addEventListener('input',event=>{
     drafts.set(client.account.accountId+':'+route().id,{title:form.elements.title?.value||'',text:form.elements.text.value});composer();
   } else if(event.target.id==='report-details')document.querySelector('#report-count').textContent=Array.from(event.target.value).length;
 });
+document.addEventListener('keydown',event=>{
+  if(event.key==='Escape'){
+    const menu=document.querySelector('.logo-actions[open]');
+    if(menu){menu.open=false;menu.querySelector('summary')?.focus();}
+  }
+});
 document.addEventListener('change',async event=>{
   if(event.target.name==='reason') {
     const other=event.target.value==='other';dialog.querySelector('#report-details').required=other;
@@ -478,6 +487,7 @@ document.addEventListener('change',async event=>{
     element.querySelector('.avatar')?.remove();
     const image=document.createElement('img');image.className='avatar company-logo-fallback';image.src=logoDraft;image.alt='';element.prepend(image);
     document.querySelector('.logo-delete-button').hidden=false;
+    document.querySelector('.logo-actions').open=false;
     document.querySelector('#logo-feedback').textContent='Logo gekozen. Sla je profiel op om het te publiceren.';
   } catch(error){document.querySelector('#logo-feedback').textContent=error.message;}
 });
