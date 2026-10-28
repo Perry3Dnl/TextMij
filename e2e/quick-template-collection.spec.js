@@ -1,0 +1,51 @@
+import {test,expect} from 'playwright/test';
+
+test.beforeEach(async({request})=>{await request.post('/__test/reset');});
+
+test('added templates remain visible, custom messages persist, and empty links use plus',async({browser,request})=>{
+  const context=await browser.newContext({viewport:{width:390,height:844}});
+  const page=await context.newPage();
+  const errors=[];page.on('pageerror',err=>errors.push(err.message));
+  await page.goto('/');
+  await page.getByLabel('Bedrijfsnaam',{exact:true}).fill('Template Garage');
+  await page.getByRole('button',{name:/Start je bedrijf/}).click();
+  await page.getByRole('button',{name:'Instellingen',exact:true}).click();
+  await page.getByRole('link',{name:'Bedrijfsprofiel bekijken'}).click();
+  await page.getByRole('button',{name:'Profiel bewerken'}).click();
+  await expect(page.locator('.quick-manager-item')).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Template toevoegen'})).toBeVisible();
+  await expect(page.getByRole('button',{name:/Actie toevoegen/})).toBeVisible();
+  await expect(page.locator('#external-action-list details')).toHaveCount(0);
+  await page.getByRole('button',{name:/Actie toevoegen/}).click();
+  await expect(page.locator('#external-action-list details')).toHaveCount(1);
+  await page.getByRole('button',{name:'Template toevoegen'}).click();
+  await page.getByLabel('Zoek een bedrijfstemplate').fill('garage');
+  await page.getByRole('button',{name:/Autogarage/}).click();
+  await expect(page.locator('.quick-manager-item')).toHaveCount(6);
+  await page.getByRole('button',{name:'Template toevoegen'}).click();
+  await page.getByLabel('Zoek een bedrijfstemplate').fill('bloemist');
+  await page.getByRole('button',{name:/Bloemist/}).click();
+  await expect(page.locator('.quick-manager-item')).toHaveCount(10);
+  await page.getByRole('button',{name:'Template toevoegen'}).click();
+  await page.getByLabel('Zoek een bedrijfstemplate').fill('garage');
+  await page.getByRole('button',{name:/Autogarage/}).click();
+  await expect(page.locator('.quick-manager-item')).toHaveCount(10);
+  await page.getByRole('button',{name:'Zelf bericht toevoegen'}).click();
+  await page.getByLabel('Knopnaam').fill('Eigen actie');
+  await page.getByLabel('Berichttitel').fill('Eigen titel');
+  await page.getByLabel('Berichttekst').fill('Mijn eigen bericht');
+  await page.getByRole('button',{name:'Snelbericht opslaan'}).click();
+  await expect(page.locator('.quick-manager-item')).toHaveCount(11);
+  await expect(page.locator('.quick-manager-item')).toContainText(['Auto klaar']);
+  await page.reload();
+  await page.getByRole('button',{name:'Profiel bewerken'}).click();
+  await expect(page.locator('.quick-manager-item')).toHaveCount(11);
+  await expect(page.locator('.quick-manager')).toContainText('Eigen actie');
+  const session=await page.evaluate(async()=>{
+    const result=await fetch('/api/v1/session',{headers:{'x-conappt-role':'business'}});
+    return result.json();
+  });
+  expect(session.quickMessages).toHaveLength(11);
+  expect(errors).toEqual([]);
+  await context.close();
+});
