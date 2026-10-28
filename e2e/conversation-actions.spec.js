@@ -37,7 +37,8 @@ for(const role of ['personal','business']) {
     expect(layout.overflow).toBe(false);
     await bar.locator('summary').click();
     await expect(bar.locator('.conversation-menu-panel')).toBeVisible();
-    await expect(bar.locator('.conversation-menu-panel')).toHaveCSS('animation-name','conversation-slide-left');
+    // The actions now expand as part of the row and shrink the preview, not overlap it.
+    await expect(bar.locator('.conversation-menu-panel')).toHaveCSS('position','relative');
     // The five icon buttons slide toward the chat text, aligned with the row,
     // without creating a vertical dropdown or increasing the row's height.
     await expect.poll(async()=>owner.locator('.session-row').first().evaluate(row=>{
@@ -53,9 +54,15 @@ for(const role of ['personal','business']) {
         sameLine:panel.top<summary.bottom&&panel.bottom>summary.top,
         allButtonsInLine:buttons.every(b=>b.top<summary.bottom&&b.bottom>summary.top),
         noHorizontalOverflow:document.documentElement.scrollWidth<=innerWidth,
-        panelWidth:panel.width, panelHeight:panel.height};
+        panelWidth:panel.width, panelHeight:panel.height,
+        noOverlap:row.querySelector('.conversation-row').getBoundingClientRect().right<=panel.left+1,
+        triggerAligned:Math.abs(summary.top-panel.top)<5,
+        rowHeight:row.getBoundingClientRect().height};
     });
     expect(inline.leftOfTrigger).toBe(true);
+    expect(inline.noOverlap).toBe(true);
+    expect(inline.triggerAligned).toBe(true);
+    expect(inline.rowHeight).toBeLessThanOrEqual(70);
     expect(inline.sameLine).toBe(true);
     expect(inline.allButtonsInLine).toBe(true);
     expect(inline.noHorizontalOverflow).toBe(true);
