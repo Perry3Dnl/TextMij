@@ -33,7 +33,7 @@ test('mobile logo ellipsis slides open, closes outside, and only offers delete f
   await page.keyboard.press('Escape');
   await expect(menu).not.toHaveAttribute('open','');
 
-  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRqcAAAAASUVORK5CYII=','base64');
+  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAFElEQVR4nGPUqLBhwAaYsIoOWgkAsRwA7P2qqMgAAAAASUVORK5CYII=','base64');
   await page.locator('#company-logo').setInputFiles({name:'logo.png',mimeType:'image/png',buffer:png});
   await expect(page.locator('#logo-feedback')).toContainText('Logo gekozen.');
   await trigger.click();
