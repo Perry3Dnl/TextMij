@@ -1,7 +1,7 @@
 import { lockConversation } from './conversation-blocks.js';
 import { httpError, readJson, responseJson } from './http-json.js';
 import { cleanBusinessProfile, BUSINESS_THEMES, validThemeColors } from '../public/model.js';
-import { industryFor } from '../public/business-templates.js';
+import { industryFor,validateQuickMessageCollection } from '../public/business-templates.js';
 
 function parseProfile(value) {
   try { return typeof value === 'string' ? JSON.parse(value) : value || {}; }
@@ -28,12 +28,14 @@ export class ContactsApi {
     this.pool = pool;
     this.authenticate = authenticate;
   }
-  async account(id) {
+  async account(id,includePrivate=false) {
     const [rows] = await this.pool.execute(
       'SELECT a.*, p.industry_id, p.profile_json FROM accounts a LEFT JOIN business_profiles p ON p.account_id = a.id WHERE a.id = ? LIMIT 1',
       [id]);
     if (!rows.length) throw httpError(404, 'Account not found');
-    return publicAccount(rows[0]);
+    const result=publicAccount(rows[0]);
+    if(includePrivate&&result.kind==='business')result.quickMessages=validateQuickMessageCollection(parseProfile(rows[0].profile_json).quickMessages);
+    return result;
   }
   async handle(request, response, path) {
     if (!['/api/v1/session', '/api/v1/profile', '/api/v1/connections', '/api/v1/conversation-block'].includes(path)) return false;
@@ -59,7 +61,7 @@ export class ContactsApi {
       finally {connection.release();}
       responseJson(response,200,{blocked:input.blocked});
     } else if (path === '/api/v1/session' && request.method === 'GET') {
-      responseJson(response, 200, await this.account(account.id));
+      responseJson(response, 200, await this.account(account.id,true));
     } else if (path === '/api/v1/profile' && request.method === 'PUT') {
       const input = await readJson(request, 160 * 1024);
       if (typeof input.name !== 'string' || !input.name.trim() || Array.from(input.name.trim()).length > 80)
@@ -68,6 +70,7 @@ export class ContactsApi {
         if (input.industryId !== null && input.industryId !== undefined && !industryFor(input.industryId))
           throw httpError(400, 'Unknown business template');
         const profile = cleanBusinessProfile(input.profile);
+        profile.quickMessages=validateQuickMessageCollection(input.quickMessages);
         profile.theme = Object.hasOwn(BUSINESS_THEMES, input.theme) ? input.theme : 'white';
         if (profile.theme === 'custom' && !validThemeColors(input.customTheme))
           throw httpError(400, 'Invalid theme colors');
