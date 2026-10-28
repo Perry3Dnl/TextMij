@@ -1,6 +1,6 @@
 // Browser/HTTP test adapter. Real MySQL schema and transactions are separately exercised in Docker CI.
 export function memoryDatabase() {
-  const db={accounts:[],profiles:[],connections:[],messages:[],reports:[],failReportInsert:false};
+  const db={accounts:[],profiles:[],connections:[],messages:[],reports:[],ratings:[],failReportInsert:false};
   let lock=Promise.resolve();
   db.query=async()=>[[{ready:1}]];
   db.execute=async(sql,args=[])=>{
@@ -54,6 +54,23 @@ export function memoryDatabase() {
       const [id,reporter_id,business_id,request_id,business_name,reason,details]=args;
       db.reports.push({id,reporter_id,business_id,request_id,business_name,reason,details,status:'open',created_at:new Date()});
       return [{affectedRows:1}];
+    }
+    if(query.startsWith('INSERT INTO business_ratings')) {
+      const [business_id,rater_id,stars]=args;
+      const existing=db.ratings.find(r=>r.business_id===business_id&&r.rater_id===rater_id);
+      if(existing)existing.stars=stars;else db.ratings.push({business_id,rater_id,stars});
+      return [{affectedRows:1}];
+    }
+    if(query.startsWith('SELECT COUNT(*) AS total, AVG(stars)')) {
+      const rows=db.ratings.filter(r=>r.business_id===args[0]);
+      return [[{total:rows.length,average:rows.length?rows.reduce((s,r)=>s+r.stars,0)/rows.length:null}]];
+    }
+    if(query.startsWith('SELECT stars FROM business_ratings'))return [db.ratings.filter(r=>r.business_id===args[0]&&r.rater_id===args[1]).map(r=>({stars:r.stars}))];
+    if(query.startsWith('SELECT COUNT(*) AS total FROM business_reports WHERE business_id'))return [[{total:db.reports.filter(r=>r.business_id===args[0]).length}]];
+    if(query.startsWith('SELECT reason,COUNT(*) AS total FROM business_reports')) {
+      const totals=new Map();
+      for(const r of db.reports.filter(r=>r.business_id===args[0]))totals.set(r.reason,(totals.get(r.reason)||0)+1);
+      return [[...totals].map(([reason,total])=>({reason,total}))];
     }
     if(query.startsWith('INSERT INTO encrypted_messages')) {
       const [idempotency_key,payload_hash,sender_business_id,recipient_device_id,message_type,ciphertext,nonce,image_ciphertext,image_nonce,wrapped_key,key_version,tier_at_acceptance]=args;
