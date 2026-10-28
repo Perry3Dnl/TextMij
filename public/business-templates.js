@@ -1,3 +1,4 @@
+import { byteLength,validateBusinessMessage } from './model.js';
 // Industry starter packs: content only. They do not book appointments or take payments.
 const entries = [
   ['garage','Autogarage','Auto & vervoer','auto garage car automotive apk onderhoud reparatie','repair','auto'],
