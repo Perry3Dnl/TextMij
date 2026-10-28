@@ -65,7 +65,7 @@ if [ "$migration_table" = 0 ]; then
 fi
 
 pending=false
-for version in 001 002 003 004 005 006; do
+for version in 001 002 003 004 005 006 007; do
   sql_file="$release_dir/deploy/sql/${version}_"
   # Precisely one matching version file must exist.
   matches=( "${sql_file}"*.sql )
@@ -94,7 +94,7 @@ if [ "$pending" = true ] && [ "$existing_volume" = true ]; then
   echo "Verified pre-migration SQL snapshot: $snapshot"
 fi
 
-for version in 001 002 003 004 005 006; do
+for version in 001 002 003 004 005 006 007; do
   matches=( "$release_dir/deploy/sql/${version}_"*.sql )
   checksum="$(sha256sum "${matches[0]}" | awk '{print $1}')"
   migration_id="$((10#$version))"
@@ -106,5 +106,5 @@ for version in 001 002 003 004 005 006; do
   fi
 done
 # Validate all tables expected by the authenticated messaging service.
-printf 'SELECT id,kind,tier,credential_hash FROM accounts LIMIT 0; SELECT payload_hash FROM encrypted_messages LIMIT 0; SELECT last_dispatch FROM dispatch_clock LIMIT 0; SELECT account_id FROM business_profiles LIMIT 0; SELECT business_id,customer_id FROM connections LIMIT 0; SELECT id,status FROM business_reports LIMIT 0;' | mysql_root >/dev/null
+printf 'SELECT id,kind,tier,credential_hash FROM accounts LIMIT 0; SELECT payload_hash FROM encrypted_messages LIMIT 0; SELECT last_dispatch FROM dispatch_clock LIMIT 0; SELECT account_id FROM business_profiles LIMIT 0; SELECT business_id,customer_id FROM connections LIMIT 0; SELECT id,status FROM business_reports LIMIT 0; SELECT business_id,stars FROM business_ratings LIMIT 0;' | mysql_root >/dev/null
 echo 'TextMij private MySQL network, durable volume, and schema verified'

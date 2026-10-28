@@ -41,5 +41,5 @@ bash "$release/deploy/database.sh" "$base" "$release"
 count="$(printf "SELECT COUNT(*) FROM accounts WHERE public_code='0000-AAA-AAA';" | mysql_root)"
 [ "$count" = 1 ] || { echo 'Repeated bootstrap lost synthetic data' >&2; exit 1; }
 migrated="$(printf 'SELECT COUNT(*) FROM schema_migrations;' | mysql_root)"
-[ "$migrated" = 6 ] || { echo 'Migration tracking failed' >&2; exit 1; }
+[ "$migrated" = 7 ] || { echo 'Migration tracking failed' >&2; exit 1; }
 echo 'Production MySQL bootstrap, secrets, migrations, persistence and repeatability passed'

@@ -12,6 +12,31 @@ import { icon } from './icons.js';
 const client=new ConapptClient();
 const main=document.querySelector('#main'),dialog=document.querySelector('#app-dialog');
 const drafts=new Map();
+const reputationCache=new Map();
+function reputationMarkup(id){
+  const d=reputationCache.get(id);
+  if(!d)return '<p>Beoordelingen laden…</p>';
+  const stars=d.average===null?'Nog geen beoordelingen':d.average.toFixed(1)+' / 5 ('+d.ratingCount+' beoordelingen)';
+  const choices=[1,2,3,4,5].map(n=>'<button class="rating-star" type="button" data-action="rate-business" data-id="'+id+'" data-stars="'+n+'" aria-label="'+n+' sterren geven" aria-pressed="'+(d.yourStars===n)+'">'+(n<=(d.yourStars||0)?'★':'☆')+'</button>').join('');
+  const warning=d.redFlags>10?'<aside class="reputation-warning" role="alert"><strong>Dit bedrijf is vaak gemeld</strong><p>Redenen: '+d.warning.map(r=>html(r.label)+' ('+r.count+')').join(', ')+'</p></aside>':'';
+  return '<section class="card company-profile-section"><h2>Beoordelingen</h2><p>⭐ '+html(stars)+'</p><p>🚩 '+d.redFlags+' meldingen</p><div class="rating-stars">'+choices+'</div>'+warning+'</section>';
+}
+async function loadReputation(id){
+  if(business())return;
+  try{
+    const data=await client.request('business-reputation?businessId='+encodeURIComponent(id));
+    if(business()||!contact(id))return;
+    reputationCache.set(id,data);
+    const panel=document.querySelector('#reputation-panel');
+    if(panel&&route().page==='bedrijf'&&route().id===id)panel.innerHTML=reputationMarkup(id);
+    const title=document.querySelector(route().page==='bedrijf'?'.company-profile-hero h1':'.chat-business-name');
+    if(title&&route().id===id)title.classList.toggle('reputation-danger',data.redFlags>10);
+  }catch{
+    const panel=document.querySelector('#reputation-panel');
+    if(panel&&route().id===id)panel.textContent='Beoordelingen tijdelijk niet beschikbaar.';
+  }
+}
+
 let query='',industryQuery='',industryLimit=12,scanner,toastTimer,sending=false,editing=false,logoDraft;
 let online=true,settingsContactId;
 const business=()=>client.role==='business';
@@ -136,7 +161,7 @@ function chat(id) {
     '<form class="composer" id="reply-form" data-id="'+id+'">'+
     '<div class="composer-row"><label class="sr-only" for="reply">Bericht</label><textarea id="reply" name="text" rows="1" placeholder="'+('Schrijf je bericht…')+'" required>'+html(draft.text)+'</textarea><button class="button send-button" type="submit" aria-label="Bericht versturen">'+icon('send')+'</button></div>'+errorLine+'</form>'+
     '<div class="composer-help"><span>Berichten worden opgehaald zolang Conappt openstaat.</span><span id="byte-count"></span></div></div></section>';
-  thread(id,true);composer();
+  thread(id,true);composer();if(!business())void loadReputation(id);
 }
 function composer() {
   const form=document.querySelector('#reply-form');if(!form)return;
@@ -155,7 +180,8 @@ function profile(id) {
     '<div><h1>'+html(item.name)+'</h1><p>'+html(p.description||'Welkom bij ons bedrijfsprofiel.')+'</p></div></div>'+
     (p.phone||p.website||Object.values(p.socials).some(Boolean)?'<section class="card company-profile-section"><h2>Contact</h2>'+(p.phone?'<p><a href="tel:'+html(p.phone.replace(/[^+0-9]/g,''))+'">'+html(p.phone)+'</a></p>':'')+'<div class="company-actions">'+external('Website',p.website)+Object.entries(p.socials).map(([name,url])=>external(name,url)).join('')+'</div></section>':'')+
     (Object.values(p.hours).some(Boolean)?'<section class="card company-profile-section"><h2>Openingstijden</h2>'+PROFILE_DAYS.map(day=>p.hours[day]?'<div class="company-hour"><strong>'+day+'</strong><span>'+html(p.hours[day])+'</span></div>':'').join('')+'</section>':'')+
-    (p.actions.length?'<section class="card company-profile-section"><h2>Wat wil je doen?</h2><div class="company-actions">'+p.actions.map(action=>external(action.label,action.url)).join('')+'</div></section>':'')+'</section>';
+    (p.actions.length?'<section class="card company-profile-section"><h2>Wat wil je doen?</h2><div class="company-actions">'+p.actions.map(action=>external(action.label,action.url)).join('')+'</div></section>':'')+(own?'':'<div id="reputation-panel">'+reputationMarkup(id)+'</div>')+'</section>';
+  if(!own)void loadReputation(id);
 }
 function field(name,title,value='',type='text',extra='') {
   return '<label class="field-label" for="'+name+'">'+title+'</label><input class="text-input" id="'+name+'" name="'+name+'" type="'+type+'" value="'+html(value)+'" '+extra+'>';
@@ -309,6 +335,16 @@ document.addEventListener('click',async event=>{
       const pending=client.history.pending.find(item=>item.id===el.dataset.id);
       if(pending)await send(pending.contactId,pending.title,pending.text,pending.id);
     } else if(action==='report')reportDialog(el.dataset.id);
+    else if(action==='rate-business'){
+      if(business())return;
+      el.disabled=true;
+      const id=el.dataset.id,stars=Number(el.dataset.stars);
+      const data=await client.request('business-reputation',{method:'PUT',body:{businessId:id,stars}});
+      reputationCache.set(id,data);
+      const panel=document.querySelector('#reputation-panel');
+      if(panel&&route().id===id)panel.innerHTML=reputationMarkup(id);
+      toast('Beoordeling opgeslagen.');
+    }
     else if(action==='edit-profile'){editing=true;go('bedrijf/'+client.account.accountId);render();}
     else if(action==='cancel-edit'){editing=false;render();}
     else if(action==='remove-logo'){logoDraft='';document.querySelector('#logo-feedback').textContent='Logo wordt verwijderd zodra je opslaat.';document.querySelector('.live-logo-editor .avatar')?.remove();}
