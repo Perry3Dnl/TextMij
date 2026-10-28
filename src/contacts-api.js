@@ -48,9 +48,20 @@ export class ContactsApi {
       const input=await readJson(request);
       if(input.confirm!=='SLUITEN')throw httpError(400,'Typ SLUITEN om de sluiting te bevestigen.');
       const closedAt=new Date().toISOString();
-      await this.pool.execute(
-        "INSERT INTO business_profiles (account_id,industry_id,profile_json) VALUES (?,NULL,?) ON DUPLICATE KEY UPDATE profile_json = IF(JSON_EXTRACT(profile_json,'$.closedAt') IS NULL,JSON_SET(COALESCE(profile_json,'{}'),'$.closedAt',?),profile_json)",
-        [account.id,JSON.stringify({closedAt}),closedAt]);
+      const connection=await this.pool.getConnection();
+      try{
+        await connection.beginTransaction();
+        // Serialize closure against sends, which lock both account rows.
+        await connection.execute('SELECT id FROM accounts WHERE id = ? FOR UPDATE',[account.id]);
+        await connection.execute(
+          "INSERT INTO business_profiles (account_id,industry_id,profile_json) VALUES (?,NULL,?) ON DUPLICATE KEY UPDATE profile_json = IF(JSON_EXTRACT(profile_json,'$.closedAt') IS NULL,JSON_SET(COALESCE(profile_json,'{}'),'$.closedAt',?),profile_json)",
+          [account.id,JSON.stringify({closedAt}),closedAt]);
+        await connection.execute(
+          "UPDATE encrypted_messages SET status = 'failed' WHERE status = 'queued' AND (sender_business_id = ? OR recipient_device_id = ?)",
+          [account.id,account.id]);
+        await connection.commit();
+      }catch(e){await connection.rollback();throw e;}
+      finally{connection.release();}
       responseJson(response,200,await this.account(account.id,true));
     } else if(path === '/api/v1/conversation-block' && request.method === 'PUT') {
       const input=await readJson(request);
