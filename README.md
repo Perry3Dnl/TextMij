@@ -2,7 +2,9 @@
 
 Conappt is a hosted business-to-customer messaging service. Customers receive a contact code without a phone number or email address. A business enters its company name, connects a customer, and sends updates from the app or its own software.
 
-## Current release: 0.16.0
+## Current release: 0.18.0
+
+- Business quick messages are collected additively from industry templates: applying another template retains existing messages and edits. The business profile editor lists all saved messages, supports editing/removal and a + button for custom messages; empty external actions show a + instead of pre-rendered blank fields. Quick messages are private to the owning business and persist on the server.
 
 - Conversation actions for both roles: block/unblock, report the connected contact, download chat history, pin/unpin and keep a private note. Blocking is enforced by the server in both directions and cancels queued messages. Pins and notes stay on this device and are separate for each profile. Exports contain only history available on this device, without private notes.
 - Session list as the main screen for both personal and business profiles; rows open a full-screen chat.
