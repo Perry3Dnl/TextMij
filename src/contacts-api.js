@@ -80,7 +80,7 @@ export class ContactsApi {
           [account.id, input.industryId || null, JSON.stringify(profile), input.industryId || null, JSON.stringify(profile)]);
       }
       await this.pool.execute('UPDATE accounts SET display_name = ? WHERE id = ?', [input.name.trim(), account.id]);
-      responseJson(response, 200, await this.account(account.id));
+      responseJson(response, 200, await this.account(account.id,true));
     } else if (path === '/api/v1/connections' && request.method === 'POST') {
       if (account.kind !== 'business') throw httpError(403, 'Only businesses can connect a customer');
       const input = await readJson(request);
