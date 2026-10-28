@@ -2,10 +2,11 @@
 
 Conappt is a hosted business-to-customer messaging service. Customers receive a contact code without a phone number or email address. A business enters its company name, connects a customer, and sends updates from the app or its own software.
 
-## Current release: 0.15.0
+## Current release: 0.15.1
 
 - Session list as the main screen for both personal and business profiles; rows open a full-screen chat.
-- Account and session settings open in an overlay from the list header, each row or the active chat. QR-code sharing and customer linking remain available above the list.
+- Conversation settings contain only options for that conversation. Profile, business theme, templates and account switching remain in general settings, opened from the list header.
+- General settings open from the list header; row and chat settings open a separate conversation-only overlay. QR-code sharing and customer linking remain available above the list.
 - The explicit example environment uses the same navigation; old Home links open the session list.
 
 - Real device and business accounts, authenticated with separate HttpOnly cookies for each role.
