@@ -1,5 +1,5 @@
 import { conversationExport,downloadConversation } from './conversation-actions.js';
-import { showSettings,closeSettings,settingsDialog,conversationControls } from './session-ui.js';
+import { showSettings,closeSettings,settingsDialog } from './session-ui.js';
 import { ConapptClient } from './client.js';
 import { startBenchmarkLabel } from './benchmark.js';
 import { optimizeCompanyLogo } from './logo.js';
@@ -112,11 +112,22 @@ function welcome(message='') {
     '<p class="field-help live-footnote">Je profiel blijft op dit apparaat beschikbaar. <a href="/?preview=1#home">Bekijk de voorbeeldomgeving</a></p>';
   navigation();
 }
+function conversationBar(item) {
+  const id=html(item.accountId),prefs=client.preferences(item.accountId);
+  const target=item.kind==='business'?'Bedrijf':'Gebruiker';
+  const action=(symbol,title,name,extra='')=>'<button type="button" class="icon-button conversation-bar-action" data-action="'+name+'" data-id="'+id+'" aria-label="'+html(title)+'" title="'+html(title)+'" '+extra+'>'+icon(symbol)+'</button>';
+  return '<div class="conversation-bar" role="group" aria-label="Acties voor '+html(label(item))+'">'+
+    action('pin',prefs.pinned?'Gesprek losmaken':'Gesprek vastzetten','pin-chat','aria-pressed="'+Boolean(prefs.pinned)+'"')+
+    action('download','Chat opslaan','export-chat')+
+    action('edit','Privénotitie','edit-note','aria-label="Privénotitie"'+(prefs.note?' data-has-note="true"':''))+
+    action('block',target+(item.blocked?' deblokkeren':' blokkeren'),'block-chat')+
+    action('flag',target+' melden','report')+'</div>';
+}
 function row(item) {
   const history=messages(item.accountId),last=history.at(-1),count=unread(item.accountId);
   return '<div class="session-row"><a class="conversation-row '+(count?'has-unread':'')+'" href="#gesprek/'+item.accountId+'">'+avatar(item)+
     '<div class="conversation-copy"><div class="conversation-top"><span class="conversation-name">'+html(label(item))+'</span>'+(client.preferences(item.accountId).pinned?'<span class="conversation-pin" role="img" aria-label="Vastgezet">'+icon('pin')+'</span>':'')+(last?'<time class="conversation-time">'+new Intl.DateTimeFormat('nl',{hour:'2-digit',minute:'2-digit'}).format(last.at)+'</time>':'')+
-    '</div><div class="conversation-bottom"><span class="conversation-preview">'+html(item.messagingBlocked?'Geblokkeerd':last?(last.own?'Jij: ':'')+(last.title||last.text):'Verbonden · stuur je eerste bericht')+'</span>'+(count?'<span class="unread-badge">'+count+'</span>':'')+'</div></div></a><button class="icon-button session-settings" data-action="settings" data-id="'+item.accountId+'" aria-label="Instellingen voor '+html(label(item))+'">'+icon('settings')+'</button></div>';
+    '</div><div class="conversation-bottom"><span class="conversation-preview">'+html(item.messagingBlocked?'Geblokkeerd':last?(last.own?'Jij: ':'')+(last.title||last.text):'Verbonden · stuur je eerste bericht')+'</span>'+(count?'<span class="unread-badge">'+count+'</span>':'')+'</div></div></a>'+conversationBar(item)+'</div>';
 }
 function rows(items=client.contacts) {
   return items.length?items.map(row).join(''):'<div class="empty-state">'+icon('chat')+'<h2>Je eerste gesprek begint hier.</h2><p>'+(business()?'Scan de code van je klant om contact te maken.':'Laat een bedrijf je QR-code scannen. Het gesprek verschijnt hier vanzelf.')+'</p></div>';
@@ -208,7 +219,7 @@ function settings(id) {
   const item=contact(id);
   if(id) {
     if(!item){toast('Gesprek niet gevonden.');return;}
-    showSettings('<section class="card settings-card session-context">'+avatar(item)+'<h3>'+html(label(item))+'</h3><a class="button secondary" href="#gesprek/'+item.accountId+'">Open gesprek</a> '+(!business()?'<a class="button secondary" href="#bedrijf/'+item.accountId+'">Bedrijfsprofiel</a>':'')+'</section>'+conversationControls({id,...client.preferences(id),blocked:item.blocked,targetKind:item.kind}),'Gespreksinstellingen');
+    showSettings('<section class="card settings-card session-context">'+avatar(item)+'<h3>'+html(label(item))+'</h3><a class="button secondary" href="#gesprek/'+item.accountId+'">Open gesprek</a> '+(!business()?'<a class="button secondary" href="#bedrijf/'+item.accountId+'">Bedrijfsprofiel</a>':'')+'</section>','Gespreksinstellingen');
     return;
   }
   const a=client.account;
@@ -342,7 +353,13 @@ document.addEventListener('click',async event=>{
       if(pending)await send(pending.contactId,pending.title,pending.text,pending.id);
     } else if(action==='pin-chat') {
       const id=el.dataset.id;await client.updateConversation(id,{pinned:!client.preferences(id).pinned});
-      if(route().page==='gesprekken')updateInbox();settings(id);
+      if(route().page==='gesprekken')updateInbox();
+    } else if(action==='edit-note') {
+      const id=el.dataset.id,item=contact(id);if(!item)return;
+      openDialog('<h2>Privénotitie</h2><p>Alleen zichtbaar voor jou op dit apparaat, niet voor je contact.</p>'+
+        '<form id="conversation-note-form" data-id="'+html(id)+'"><label class="field-label" for="conversation-note">Notitie bij '+html(label(item))+'</label>'+
+        '<textarea class="text-input" id="conversation-note" name="note" rows="5" maxlength="2000" placeholder="Schrijf een notitie…">'+html(client.preferences(id).note||'')+'</textarea>'+
+        errorLine+'<div class="dialog-actions">'+button('Annuleren','close-dialog','',true)+'<button class="button" type="submit">Notitie opslaan</button></div></form>');
     } else if(action==='export-chat') {
       const id=el.dataset.id,item=contact(id);if(!item)return;
       downloadConversation(id,conversationExport({ownName:business()?client.account.name:'Jij',contactName:label(item),messages:messages(id)}));
@@ -352,7 +369,7 @@ document.addEventListener('click',async event=>{
     } else if(action==='confirm-block') {
       el.disabled=true;const id=el.dataset.id;
       await client.block(id,el.dataset.blocked==='true');dialog.close();
-      if(route().page==='gesprekken')updateInbox();composer();settings(id);
+      if(route().page==='gesprekken')updateInbox();composer();
     } else if(action==='report')reportDialog(el.dataset.id);
     else if(action==='rate-business'){
       if(business())return;
@@ -407,7 +424,7 @@ document.addEventListener('submit',async event=>{
   try {
     const data=new FormData(form);
     if(form.id==='conversation-note-form') {
-      await client.updateConversation(form.dataset.id,{note:data.get('note')});toast('Privénotitie opgeslagen.');
+      await client.updateConversation(form.dataset.id,{note:data.get('note')});if(dialog.contains(form))dialog.close();if(route().page==='gesprekken')updateInbox();toast('Privénotitie opgeslagen.');
     } else if(form.id==='signup-business') {
       await client.register('business',data.get('name')||data.get('signup-name'));
       if(dialog.open)dialog.close();closeSettings();settingsContactId=undefined;query='';render();toast('Je bedrijf staat klaar.');
