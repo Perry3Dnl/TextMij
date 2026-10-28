@@ -1,5 +1,5 @@
 const paths = {
-  pin: '<path d="m16 3 5 5-4 1-3 5v3l-3-3-5 3-3-3 5-3-3-3h3l5-3zM3 21l5-5"/>',
+  pin: '<path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.74 1.74L5 13l-2 2v2h18v-2l-2-2-2.26-.5A2 2 0 0 1 15 10.76V6a1 1 0 0 1 1-1h1V2H7v3h1a1 1 0 0 1 1 1z"/>',
   download: '<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',
   block: '<circle cx="12" cy="12" r="9"/><path d="m6 6 12 12"/>',
   flag: '<path d="M5 21V3m0 1c5-3 9 3 14 0v10c-5 3-9-3-14 0"/>',
