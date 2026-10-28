@@ -295,3 +295,15 @@
 .business-closed-notice p{margin:6px 0 0;font-size:13px}
 .account-closure-settings{border-color:var(--line)}
 @media(max-width:380px){.live-logo-column .logo-change-button,.live-logo-column .logo-delete-button{font-size:10px}}
+
+/* Logo edit actions: one compact overflow trigger with an animated pop-out. */
+.live-logo-column .logo-actions{position:relative;align-self:center;width:100%;display:flex;flex-direction:column;align-items:center;overflow:visible}
+.live-logo-column .logo-actions>summary{list-style:none;display:flex;align-items:center;justify-content:center;min-width:42px;min-height:36px;border:1px solid var(--line);border-radius:9px;background:var(--white);color:var(--ink);font-size:25px;line-height:1;letter-spacing:2px;cursor:pointer}
+.live-logo-column .logo-actions>summary::-webkit-details-marker{display:none}
+.live-logo-column .logo-actions>summary:hover,.live-logo-column .logo-actions>summary:focus-visible{background:var(--green-light);outline-offset:2px}
+.live-logo-column .logo-actions[open]>summary{background:var(--green-light)}
+.live-logo-column .logo-actions-panel{position:absolute;z-index:15;top:calc(100% + 5px);left:0;min-width:168px;max-width:calc(100vw - 32px);padding:7px;display:grid;gap:5px;border:1px solid var(--line);border-radius:12px;background:var(--white);box-shadow:0 12px 26px #0002;transform-origin:top left;animation:logo-actions-reveal .17s ease-out both}
+.live-logo-column .logo-actions:not([open]) .logo-actions-panel{display:none}
+.live-logo-column .logo-actions-panel .logo-change-button,.live-logo-column .logo-actions-panel .logo-delete-button{width:100%;min-height:38px;justify-content:flex-start;white-space:nowrap;padding:8px 10px;font-size:12px}
+@keyframes logo-actions-reveal{from{opacity:0;transform:translateY(-8px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(prefers-reduced-motion:reduce){.live-logo-column .logo-actions-panel{animation:none}}
