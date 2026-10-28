@@ -37,7 +37,25 @@ for(const role of ['personal','business']) {
     expect(layout.overflow).toBe(false);
     await bar.locator('summary').click();
     await expect(bar.locator('.conversation-menu-panel')).toBeVisible();
-    await expect(bar.locator('.conversation-menu-panel')).toHaveCSS('animation-name','conversation-menu-reveal');
+    await expect(bar.locator('.conversation-menu-panel')).toHaveCSS('animation-name','conversation-slide-left');
+    // The five icon buttons slide toward the chat text, aligned with the row,
+    // without creating a vertical dropdown or increasing the row's height.
+    const inline=await owner.locator('.session-row').first().evaluate(row=>{
+      const summary=row.querySelector('.conversation-bar>summary').getBoundingClientRect();
+      const panel=row.querySelector('.conversation-menu-panel').getBoundingClientRect();
+      const buttons=[...row.querySelectorAll('.conversation-menu-action')].map(el=>el.getBoundingClientRect());
+      return {leftOfTrigger:panel.right<=summary.left+1,
+        sameLine:panel.top<summary.bottom&&panel.bottom>summary.top,
+        allButtonsInLine:buttons.every(b=>b.top<summary.bottom&&b.bottom>summary.top),
+        noHorizontalOverflow:document.documentElement.scrollWidth<=innerWidth,
+        panelWidth:panel.width, panelHeight:panel.height};
+    });
+    expect(inline.leftOfTrigger).toBe(true);
+    expect(inline.sameLine).toBe(true);
+    expect(inline.allButtonsInLine).toBe(true);
+    expect(inline.noHorizontalOverflow).toBe(true);
+    expect(inline.panelHeight).toBeLessThanOrEqual(47);
+    expect(inline.panelWidth).toBeGreaterThan(150);
     await owner.locator('.sessions-header h1').click();
     await expect(bar.locator('.conversation-menu-panel')).toBeHidden();
     await bar.locator('summary').click();
