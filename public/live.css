@@ -297,19 +297,20 @@
 @media(max-width:380px){.live-logo-column .logo-change-button,.live-logo-column .logo-delete-button{font-size:10px}}
 
 
-/* Compact conversation overflow menu. Keep row details visible on small phones. */
-.session-app .session-row {position:relative;isolation:isolate;overflow:visible}
+/* Conversation options slide LEFT into the same row, not into a dropdown. */
+.session-app .session-row{position:relative;isolation:isolate;overflow:visible}
 .session-app .session-row:has(.conversation-bar[open]){z-index:20}
 .session-app .conversation-bar{position:relative;display:block;flex-shrink:0;padding:0}
 .session-app .conversation-bar>summary{list-style:none;display:flex;align-items:center;justify-content:center;width:42px;height:42px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--ink);font-size:27px;line-height:1;letter-spacing:2px;cursor:pointer;user-select:none}
 .session-app .conversation-bar>summary::-webkit-details-marker{display:none}
 .session-app .conversation-bar>summary:hover,.session-app .conversation-bar>summary:focus-visible,.session-app .conversation-bar[open]>summary{background:var(--green-light);outline-offset:2px}
-.session-app .conversation-menu-panel{position:absolute;right:0;top:calc(100% + 4px);width:205px;max-width:calc(100vw - 20px);display:grid;gap:3px;padding:6px;background:var(--white);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 30px #0002;z-index:30;transform-origin:top right;animation:conversation-menu-reveal .17s ease-out both}
+/* Overlay only the text-side of this row, leaving the row height unchanged. */
+.session-app .conversation-menu-panel{position:absolute;right:100%;top:50%;width:178px;height:46px;display:flex;align-items:center;justify-content:space-evenly;gap:1px;padding:0 3px;background:var(--white);border:0;border-radius:10px 0 0 10px;z-index:2;transform:translateY(-50%);transform-origin:right center;animation:conversation-slide-left .19s ease-out both}
 .session-app .conversation-bar:not([open]) .conversation-menu-panel{display:none}
-.session-app .conversation-menu-action{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:8px 10px;border:0;border-radius:8px;background:transparent;color:var(--ink);font-size:13px;cursor:pointer;text-align:left}
+.session-app .conversation-menu-action{display:flex;align-items:center;justify-content:center;flex:1 1 0;min-width:0;height:40px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--ink);cursor:pointer}
 .session-app .conversation-menu-action:hover,.session-app .conversation-menu-action:focus-visible{background:var(--green-light)}
-.session-app .conversation-menu-action svg{width:17px;height:17px;flex-shrink:0}
+.session-app .conversation-menu-action svg{width:19px;height:19px;flex-shrink:0}
 .session-app .conversation-menu-action[aria-pressed="true"],.session-app .conversation-menu-action[data-has-note="true"]{color:var(--green)}
-@keyframes conversation-menu-reveal{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes conversation-slide-left{from{opacity:0;transform:translate(16px,-50%) scaleX(.9)}to{opacity:1;transform:translate(0,-50%) scaleX(1)}}
 @media(prefers-reduced-motion:reduce){.session-app .conversation-menu-panel{animation:none}}
-@media(max-width:380px){.session-app .conversation-bar>summary{width:36px;height:40px}}
+@media(max-width:380px){.session-app .conversation-bar>summary{width:36px;height:40px}.session-app .conversation-menu-panel{width:157px;height:43px}.session-app .conversation-menu-action{height:38px}.session-app .conversation-menu-action svg{width:17px;height:17px}}

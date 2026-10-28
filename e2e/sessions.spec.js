@@ -67,7 +67,8 @@ for(const width of [320,390,1200]) {
     await customer.locator('.conversation-bar summary').click();
     await expect(customer.locator('.conversation-bar').getByRole('button',{name:'Bedrijf melden'})).toBeVisible();
     await expect(customer.locator('.chat-panel')).toHaveCount(0);
-    await customer.locator('.conversation-row').click();
+    // The expanded actions intentionally cover the preview; open the chat via its unobstructed avatar.
+    await customer.locator('.conversation-row').click({position:{x:12,y:15}});
     await expect(customer.locator('#message-thread')).toContainText('Een conceptbericht');
     await fullScreenChat(customer);
     await customer.locator('#reply').fill('Mijn concept');
