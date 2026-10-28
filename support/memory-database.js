@@ -19,7 +19,7 @@ export function memoryDatabase() {
       const index=db.blocks.findIndex(b=>b.blocker_id===args[0]&&b.blocked_id===args[1]);
       if(index>=0)db.blocks.splice(index,1);return [{affectedRows:index>=0?1:0}];
     }
-    if(query.startsWith("UPDATE encrypted_messages SET status = 'failed'")) {
+    if(query.startsWith("UPDATE encrypted_messages SET status = 'failed'") && query.includes('sender_business_id = ? AND recipient_device_id = ?')) {
       for(const m of db.messages)if(m.status==='queued'&&((m.sender_business_id===args[0]&&m.recipient_device_id===args[1])||(m.sender_business_id===args[2]&&m.recipient_device_id===args[3])))m.status='failed';
       return [{affectedRows:1}];
     }
