@@ -24,6 +24,21 @@ for(const role of ['personal','business']) {
     await owner.getByRole('link',{name:'Terug naar gesprekken'}).click();
     const bar=owner.locator('.conversation-bar').first();
     await expect(bar.getByRole('button')).toHaveCount(5);
+    // All five actions must share the conversation row, including at 320px.
+    const geometry=await owner.locator('.session-row').first().evaluate(row=>{
+      const summary=row.querySelector('.conversation-row').getBoundingClientRect();
+      const actions=[...row.querySelectorAll('.conversation-bar-action')].map(el=>el.getBoundingClientRect());
+      const bounds=row.getBoundingClientRect();
+      return {summaryTop:summary.top,summaryBottom:summary.bottom,
+        barTop:Math.min(...actions.map(a=>a.top)),barBottom:Math.max(...actions.map(a=>a.bottom)),
+        barRight:Math.max(...actions.map(a=>a.right)),rowRight:bounds.right,
+        scrollWidth:document.documentElement.scrollWidth,viewport:innerWidth};
+    });
+    expect(geometry.barTop).toBeLessThan(geometry.summaryBottom);
+    expect(geometry.barBottom).toBeGreaterThan(geometry.summaryTop);
+    expect(geometry.barRight).toBeLessThanOrEqual(geometry.rowRight+1);
+    expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.viewport);
+
     await bar.getByRole('button',{name:'Privénotitie'}).click();
     await owner.getByLabel('Notitie bij', {exact:false}).fill(note);
     await owner.getByRole('button',{name:'Notitie opslaan'}).click();
