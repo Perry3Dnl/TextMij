@@ -37,9 +37,12 @@ mysql_root() {
 }
 # Persist a harmless synthetic account across a second bootstrap. No production data.
 printf "INSERT INTO accounts (id,kind,public_code,display_name,public_key,credential_hash) VALUES (REPEAT('a',64),'personal','0000-AAA-AAA','CI synthetic','invalid-test-key',UNHEX(REPEAT('01',32)));" | mysql_root
+printf "INSERT INTO accounts (id,kind,public_code,display_name,public_key,credential_hash) VALUES (REPEAT('b',64),'business','0000-BBB-BBB','CI business','invalid-test-key',UNHEX(REPEAT('02',32))); INSERT INTO connections (business_id,customer_id) VALUES (REPEAT('b',64),REPEAT('a',64)); INSERT INTO account_blocks (blocker_id,blocked_id) VALUES (REPEAT('a',64),REPEAT('b',64)); INSERT INTO user_reports (id,reporter_id,user_id,request_id,user_name,reason,details) VALUES ('12345678-1234-4234-8234-123456789abc',REPEAT('b',64),REPEAT('a',64),'12345678-1234-4234-8234-123456789abd','CI synthetic','spam','CI report');" | mysql_root
 bash "$release/deploy/database.sh" "$base" "$release"
+[ "$(printf 'SELECT COUNT(*) FROM account_blocks;' | mysql_root)" = 1 ] || { echo 'Repeated bootstrap lost blocks' >&2; exit 1; }
+[ "$(printf 'SELECT COUNT(*) FROM user_reports;' | mysql_root)" = 1 ] || { echo 'Repeated bootstrap lost user reports' >&2; exit 1; }
 count="$(printf "SELECT COUNT(*) FROM accounts WHERE public_code='0000-AAA-AAA';" | mysql_root)"
 [ "$count" = 1 ] || { echo 'Repeated bootstrap lost synthetic data' >&2; exit 1; }
 migrated="$(printf 'SELECT COUNT(*) FROM schema_migrations;' | mysql_root)"
-[ "$migrated" = 7 ] || { echo 'Migration tracking failed' >&2; exit 1; }
+[ "$migrated" = 8 ] || { echo 'Migration tracking failed' >&2; exit 1; }
 echo 'Production MySQL bootstrap, secrets, migrations, persistence and repeatability passed'

@@ -6,6 +6,7 @@ const db=memoryDatabase(),api=new MessagingApi(db),server=createApp({messaging:a
 const handler=server.listeners('request')[0];
 server.removeAllListeners('request');
 server.on('request',(request,response)=>{
+  if(request.url==='/__test/user-reports'){response.writeHead(200,{'Content-Type':'application/json'});response.end(JSON.stringify(db.userReports));return;}
   if(request.url==='/__test/reports'){
     response.writeHead(200,{'Content-Type':'application/json'});response.end(JSON.stringify(db.reports));return;
   }

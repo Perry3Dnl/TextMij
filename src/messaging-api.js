@@ -1,3 +1,4 @@
+import { lockConversation,hasBlock } from './conversation-blocks.js';
 import { randomBytes, createHash } from 'node:crypto';
 import { EncryptedOutbox } from './encrypted-outbox.js';
 import { ContactsApi } from './contacts-api.js';
@@ -100,10 +101,17 @@ export class MessagingApi {
     const envelope = input.envelope;
     if (!envelope || typeof envelope !== 'object' || !idPattern.test(envelope.recipientId || '') || sender.id === envelope.recipientId)
       throw error(400,'Stable recipient ID required');
-    const [rows] = await this.pool.execute('SELECT id FROM accounts WHERE id = ? LIMIT 1',[envelope.recipientId]);
-    if (!rows.length) throw error(404,'Recipient not found');
-    const accepted = await this.outbox.enqueue({senderId:sender.id,tier:sender.kind==='personal'?'standard':sender.tier,
-      envelope,idempotencyKey:input.idempotencyKey.toLowerCase()});
+    const connection=await this.pool.getConnection();
+    let accepted;
+    try {
+      await connection.beginTransaction();
+      await lockConversation(connection,sender.id,envelope.recipientId);
+      if(await hasBlock(connection,sender.id,envelope.recipientId))throw error(403,'Dit gesprek is geblokkeerd.');
+      accepted=await new EncryptedOutbox(connection).enqueue({senderId:sender.id,tier:sender.kind==='personal'?'standard':sender.tier,
+        envelope,idempotencyKey:input.idempotencyKey.toLowerCase()});
+      await connection.commit();
+    } catch(e){await connection.rollback();throw e;}
+    finally {connection.release();}
     responseJson(response,202,{messageId:accepted.id,status:'queued'});
   }
   async inbox(request,response,url) {
@@ -112,7 +120,7 @@ export class MessagingApi {
     if (!/^(0|[1-9][0-9]{0,14})$/.test(raw) || Number(raw) > Number.MAX_SAFE_INTEGER) throw error(400,'Invalid cursor');
     const [rows] = await this.pool.execute(
       `SELECT id,sender_business_id,message_type,ciphertext,nonce,image_ciphertext,image_nonce,wrapped_key,key_version,queued_at
-       FROM encrypted_messages WHERE recipient_device_id = ? AND id > ? AND status = 'dispatched' ORDER BY id ASC LIMIT 100`,
+       FROM encrypted_messages WHERE recipient_device_id = ? AND id > ? AND status = 'dispatched' AND NOT EXISTS (SELECT 1 FROM account_blocks b WHERE (b.blocker_id = recipient_device_id AND b.blocked_id = sender_business_id) OR (b.blocked_id = recipient_device_id AND b.blocker_id = sender_business_id)) ORDER BY id ASC LIMIT 100`,
       [account.id,Number(raw)]);
     responseJson(response,200,{messages:rows.map(row=>({id:String(row.id),senderId:Buffer.isBuffer(row.sender_business_id)?row.sender_business_id.toString('utf8'):String(row.sender_business_id),
       queuedAt:row.queued_at, envelope:{version:1,recipientId:account.id,template:row.message_type,

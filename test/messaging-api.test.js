@@ -1,39 +1,12 @@
+import { memoryDatabase } from '../support/memory-database.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createApp } from '../src/app.js';
 import { MessagingApi } from '../src/messaging-api.js';
 import { generateDeviceKeyPair, exportDevicePublicKey, encryptForRecipient, decryptFromSender } from '../public/crypto.js';
 
-const hashEq = (a,b) => Buffer.from(a).equals(Buffer.from(b));
-function fakeDatabase() {
-  const accounts = [], messages = [];
-  return {
-    accounts, messages,
-    async execute(sql,args=[]) {
-      if (sql.startsWith('INSERT INTO accounts')) {
-        const [id,kind,public_code,display_name,email,public_key,credential_hash] = args;
-        accounts.push({id,kind,public_code,display_name,email,public_key,credential_hash,tier:'standard',key_version:1});
-        return [{affectedRows:1}];
-      }
-      if (sql.includes('WHERE credential_hash = ?')) return [accounts.filter(a=>hashEq(a.credential_hash,args[0]))];
-      if (sql.includes('WHERE id = ? OR public_code = ?')) return [accounts.filter(a=>a.id===args[0] || a.public_code===args[1]).slice(0,1)];
-      if (sql.startsWith('SELECT id FROM accounts')) return [accounts.filter(a=>a.id===args[0]).map(a=>({id:a.id}))];
-      if (sql.startsWith('INSERT INTO encrypted_messages')) {
-        const [idempotency_key,payload_hash,sender_business_id,recipient_device_id,message_type,ciphertext,nonce,
-          image_ciphertext,image_nonce,wrapped_key,key_version,tier_at_acceptance] = args;
-        messages.push({id:messages.length+1,idempotency_key,payload_hash,sender_business_id,
-          recipient_device_id,message_type,ciphertext,nonce,image_ciphertext,image_nonce,wrapped_key,key_version,
-          tier_at_acceptance,queued_at:new Date(),status:'dispatched'});
-        return [{affectedRows:1}];
-      }
-      if (sql.startsWith('SELECT id, payload_hash')) return [[messages.filter(a=>a.sender_business_id===args[0] && a.idempotency_key===args[1]).at(-1)]];
-      if (sql.includes("AND status = 'dispatched'")) return [messages.filter(m=>m.recipient_device_id===args[0] && m.id>args[1])];
-      throw new Error('Unmocked SQL '+sql);
-    }
-  };
-}
 test('HTTP registration, encrypted send and receive, authorization and privacy contract', async t => {
-  const db = fakeDatabase();
+  const db = memoryDatabase();
   const server = createApp({messaging:new MessagingApi(db),revision:'integration-test'});
   await new Promise(ok=>server.listen(0,'127.0.0.1',ok));
   t.after(()=>new Promise(ok=>server.close(ok)));

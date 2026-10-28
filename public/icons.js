@@ -1,4 +1,7 @@
 const paths = {
+  pin: '<path d="m16 3 5 5-4 1-3 5v3l-3-3-5 3-3-3 5-3-3-3h3l5-3zM3 21l5-5"/>',
+  download: '<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',
+  block: '<circle cx="12" cy="12" r="9"/><path d="m6 6 12 12"/>',
   flag: '<path d="M5 21V3m0 1c5-3 9 3 14 0v10c-5 3-9-3-14 0"/>',
   scan: '<path d="M8 3H4a1 1 0 0 0-1 1v4m13-5h4a1 1 0 0 1 1 1v4M3 16v4a1 1 0 0 0 1 1h4m8 0h4a1 1 0 0 0 1-1v-4M4 12h16"/>',
   qr: '<path d="M3 3h6v6H3zm12 0h6v6h-6zM3 15h6v6H3zm12 0h3v3h-3zm3 3h3v3h-3zM12 3v6m0 3h9m-9 0v9"/>',

@@ -2,8 +2,9 @@
 
 Conappt is a hosted business-to-customer messaging service. Customers receive a contact code without a phone number or email address. A business enters its company name, connects a customer, and sends updates from the app or its own software.
 
-## Current release: 0.15.1
+## Current release: 0.16.0
 
+- Conversation actions for both roles: block/unblock, report the connected contact, download chat history, pin/unpin and keep a private note. Blocking is enforced by the server in both directions and cancels queued messages. Pins and notes stay on this device and are separate for each profile. Exports contain only history available on this device, without private notes.
 - Session list as the main screen for both personal and business profiles; rows open a full-screen chat.
 - Conversation settings contain only options for that conversation. Profile, business theme, templates and account switching remain in general settings, opened from the list header.
 - General settings open from the list header; row and chat settings open a separate conversation-only overlay. QR-code sharing and customer linking remain available above the list.
@@ -62,11 +63,11 @@ The WebCrypto implementation provides recipient encryption against passive ciphe
 
 ## Business reports
 
-Only an authenticated personal account can report a connected business. The server derives the reporter, verifies the target, snapshots the current business name and validates a reason plus at most 2000 characters of explanation. Ten new reports per account per rolling day are allowed.
+An authenticated personal account can report a connected business. An authenticated business can report a connected user through the separate private user-reports endpoint. The server derives the reporter, verifies the target, snapshots the current business name and validates a reason plus at most 2000 characters of explanation. Ten new reports per account per rolling day are allowed.
 
 Reports use a client request UUID for safe retries: replaying an identical submission returns the original receipt; reusing it with a different payload is rejected. Database transactions and an account row lock serialize concurrent requests. Report contents are readable by Conappt moderators, kept separate from ciphertext chat, and never exposed through a public listing API or to the reported company. No conversation history, email or phone number is automatically attached.
 
-Reports are available to authorized server/database operators through the moderation query in [docs/MESSAGING_API.md](docs/MESSAGING_API.md). There is no moderation dashboard, automatic notification email, automatic account suspension or automated report-retention job in this release.
+Both report types are available to authorized server/database operators through the moderation queries in [docs/MESSAGING_API.md](docs/MESSAGING_API.md). There is no moderation dashboard, automatic notification email, automatic account suspension or automated report-retention job in this release.
 
 ## Automatic round-trip development benchmark (0.13.0)
 

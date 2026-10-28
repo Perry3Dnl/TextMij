@@ -112,3 +112,6 @@ node scripts/benchmark-smoke.js
 ```
 
 The test reports observed throughput for this browser/network and current bounded batch transport, not an absolute hardware maximum or the durable messaging API's throughput. Details and counting semantics are in README.md.
+
+
+Release 0.16.0 applies additive migration 007 for server-enforced conversation blocks and private business-to-user reports. Pins, private notes and chat exports remain device-local. CI exercises blocking and concurrent message acceptance against real MySQL, and verifies block/report persistence through a repeated production bootstrap.

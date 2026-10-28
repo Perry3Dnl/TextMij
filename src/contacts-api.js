@@ -1,3 +1,4 @@
+import { lockConversation } from './conversation-blocks.js';
 import { httpError, readJson, responseJson } from './http-json.js';
 import { cleanBusinessProfile, BUSINESS_THEMES, validThemeColors } from '../public/model.js';
 import { industryFor } from '../public/business-templates.js';
@@ -35,9 +36,29 @@ export class ContactsApi {
     return publicAccount(rows[0]);
   }
   async handle(request, response, path) {
-    if (!['/api/v1/session', '/api/v1/profile', '/api/v1/connections'].includes(path)) return false;
+    if (!['/api/v1/session', '/api/v1/profile', '/api/v1/connections', '/api/v1/conversation-block'].includes(path)) return false;
     const account = await this.authenticate(request);
-    if (path === '/api/v1/session' && request.method === 'GET') {
+    if(path === '/api/v1/conversation-block' && request.method === 'PUT') {
+      const input=await readJson(request);
+      if(!/^[a-f0-9]{64}$/.test(input.contactId||'')||input.contactId===account.id||typeof input.blocked!=='boolean')
+        throw httpError(400,'Invalid conversation block');
+      const connection=await this.pool.getConnection();
+      try {
+        await connection.beginTransaction();
+        await lockConversation(connection,account.id,input.contactId);
+        const businessId=account.kind==='business'?account.id:input.contactId;
+        const customerId=account.kind==='personal'?account.id:input.contactId;
+        const [linked]=await connection.execute('SELECT business_id FROM connections WHERE business_id = ? AND customer_id = ?',[businessId,customerId]);
+        if(!linked.length)throw httpError(404,'Connected contact required');
+        if(input.blocked) {
+          await connection.execute('INSERT IGNORE INTO account_blocks (blocker_id,blocked_id) VALUES (?,?)',[account.id,input.contactId]);
+          await connection.execute("UPDATE encrypted_messages SET status = 'failed' WHERE status = 'queued' AND ((sender_business_id = ? AND recipient_device_id = ?) OR (sender_business_id = ? AND recipient_device_id = ?))",[account.id,input.contactId,input.contactId,account.id]);
+        } else await connection.execute('DELETE FROM account_blocks WHERE blocker_id = ? AND blocked_id = ?',[account.id,input.contactId]);
+        await connection.commit();
+      } catch(error){await connection.rollback();throw error;}
+      finally {connection.release();}
+      responseJson(response,200,{blocked:input.blocked});
+    } else if (path === '/api/v1/session' && request.method === 'GET') {
       responseJson(response, 200, await this.account(account.id));
     } else if (path === '/api/v1/profile' && request.method === 'PUT') {
       const input = await readJson(request, 160 * 1024);
@@ -80,8 +101,11 @@ export class ContactsApi {
         'FROM connections c JOIN accounts a ON a.id = ' + (business ? 'c.customer_id' : 'c.business_id') +
         ' LEFT JOIN business_profiles p ON p.account_id = a.id WHERE ' + (business ? 'c.business_id' : 'c.customer_id') +
         ' = ? ORDER BY c.created_at DESC LIMIT 1000', [account.id]);
+      const [blocks]=await this.pool.execute('SELECT blocker_id,blocked_id FROM account_blocks WHERE blocker_id = ? OR blocked_id = ?',[account.id,account.id]);
       responseJson(response, 200, { contacts: rows.map(row => ({
         ...publicAccount(row), connectedAt: row.connected_at,
+        blocked:blocks.some(b=>b.blocker_id===account.id&&b.blocked_id===String(row.id)),
+        messagingBlocked:blocks.some(b=>(b.blocker_id===account.id&&b.blocked_id===String(row.id))||(b.blocked_id===account.id&&b.blocker_id===String(row.id))),
         ...(business && row.customer_alias ? { alias: row.customer_alias } : {}),
       })) });
     } else {
