@@ -17,9 +17,9 @@ All production requests use HTTPS and JSON. API clients authenticate with Author
 
 - POST /api/v1/connections accepts {code,alias?} from an authenticated business. The code must identify a personal account. Reconnecting opens the same pair. The optional alias is visible only to that business.
 - GET /api/v1/connections returns the authenticated account's connected customers or businesses, including safe public profiles, keys and selected industry.
-- PUT /api/v1/profile accepts {name,industryId?,profile?,theme?,customTheme?} for the authenticated account. Business profile fields are logo, description, optional phone/HTTPS website/social links, opening hours and up to three external actions. Unknown industries and invalid theme colors are rejected.
+- PUT /api/v1/profile accepts {name,industryId?,profile?,theme?,customTheme?,quickMessages?} for the authenticated account. Business profile fields are logo, description, optional phone/HTTPS website/social links, opening hours and up to three external actions. Unknown industries and invalid theme colors are rejected.
 
-The live QR contains only the same-origin public contact link /#connect/CODE. Physical sharing of that code is the invitation to connect; it is not a login or device-transfer token.
+Businesses may save up to 48 quickMessages entries with unique template-qualified or custom UUID keys and validated label/title/text fields. Importing another industry adds missing messages without replacing previous ones. Only the authenticated business owner's session and profile update responses return quickMessages; customer connection responses omit them. Existing accounts without a saved collection retain the selected industry's original quick messages.\n\nThe live QR contains only the same-origin public contact link /#connect/CODE. Physical sharing of that code is the invitation to connect; it is not a login or device-transfer token.
 
 ## Encrypted messaging
 
