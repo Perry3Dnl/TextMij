@@ -127,13 +127,13 @@ test('example uses the same session navigation for personal and business profile
   await page.getByRole('button',{name:'Instellingen sluiten'}).click();
   await page.getByRole('link',{name:'Terug naar gesprekken'}).click();
   await page.getByRole('button',{name:'Instellingen',exact:true}).click();
-  await expect(page.getByLabel('Naam of gebruikersnaam',exact:true)).toBeVisible();
+  await expect(page.getByLabel('Naam of gebruikersnaam',{exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Wissel van account',exact:true}).click();
   await page.locator('[data-action="choose-account"][data-mode="business"]').click();
   await expect(page.getByRole('heading',{name:'Klantgesprekken',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Instellingen',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Bedrijfsthema',exact:true})).toBeVisible();
-  await expect(page.getByLabel('Bedrijfsnaam',exact:true)).toBeVisible();
+  await expect(page.getByLabel('Bedrijfsnaam',{exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Instellingen sluiten'}).click();
   await page.locator('.session-row [data-action="settings"]').first().click();
   await conversationOnly(page);
