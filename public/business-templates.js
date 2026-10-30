@@ -204,5 +204,6 @@ export function messageFromAction(action, values = {}) {
     const display = field.type === 'date' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value.split('-').reverse().join('-') : value;
     text = text.replaceAll('{' + field.name + '}',display);
   }
-  return { title:action.title, text,replyOptions:validateReplyOptions(action.replyOptions) };
+  const replyOptions=validateReplyOptions(action.replyOptions);
+  return { title:action.title, text, ...(replyOptions.length ? {replyOptions} : {}) };
 }
