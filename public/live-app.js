@@ -1,3 +1,4 @@
+import { replyButtons,validateReplyOptions } from './interactive-replies.js';
 import { openingHoursFields,readOpeningHours,syncOpeningHours } from './opening-hours.js';
 import { conversationExport,downloadConversation } from './conversation-actions.js';
 import { showSettings,closeSettings,settingsDialog } from './session-ui.js';
@@ -150,7 +151,7 @@ function updateInbox() {
 function renderMessage(message) {
   return '<div class="message '+(message.own?'outgoing':'incoming')+'"><div class="message-body">'+
     (message.title&&message.title!=='Reactie'?'<h2 class="message-title">'+html(message.title)+'</h2>':'')+
-    '<p class="message-text">'+html(message.text)+'</p><div class="message-meta"><time>'+new Intl.DateTimeFormat('nl',{hour:'2-digit',minute:'2-digit'}).format(message.at)+'</time>'+
+    '<p class="message-text">'+html(message.text)+'</p>'+replyButtons(message,sending||Boolean(contact(message.contactId)?.messagingBlocked)||Boolean(client.history.replyUsed?.includes(message.id)))+'<div class="message-meta"><time>'+new Intl.DateTimeFormat('nl',{hour:'2-digit',minute:'2-digit'}).format(message.at)+'</time>'+
     (message.pending?'<button class="text-link plain-button" data-action="retry-message" data-id="'+message.id+'">Niet bevestigd · opnieuw proberen</button>':message.own?icon('check'):'')+'</div></div></div>';
 }
 function thread(id,scroll=false) {
@@ -227,6 +228,9 @@ function editQuickMessage(key) {
     field('quick-label','Knopnaam',item?.label||'','text','maxlength="35" required')+
     field('quick-title','Berichttitel',item?.title||'','text','maxlength="150" required')+
     '<label class="field-label" for="quick-text">Berichttekst</label><textarea class="text-input" id="quick-text" name="text" rows="5" maxlength="1024" required>'+html(item?.text||'')+'</textarea>'+
+    '<label class="field-label" for="quick-type">Berichttype</label><select class="text-input" id="quick-type" name="reply-type"><option value="standard">Standaardbericht</option><option value="replies" '+(item?.replyOptions?.length?'selected':'')+'>Bericht met antwoordknoppen</option></select>'+
+    '<div id="reply-option-editor" '+(item?.replyOptions?.length?'':'hidden')+'><p class="field-help">Maximaal 3 knoppen. De klant verstuurt de ingestelde antwoordtekst als eigen bericht.</p>'+
+    [0,1,2].map(i=>'<div class="reply-option-editor-row">'+field('reply-label-'+i,'Knop '+(i+1),item?.replyOptions?.[i]?.label||'','text','maxlength="35"')+field('reply-text-'+i,'Te versturen antwoord',item?.replyOptions?.[i]?.text||'','text','maxlength="1024"')+'</div>').join('')+'</div>'+
     errorLine+'<div class="dialog-actions">'+button('Annuleren','close-dialog','',true)+
     (isNew?'':button('Verwijderen','delete-quick-message','data-id="'+html(key)+'"',true))+
     '<button class="button" type="submit">Snelbericht opslaan</button></div></form>');
@@ -314,20 +318,22 @@ function reportDialog(id) {
     '<p class="report-privacy">'+icon('info')+'<span>Je melding wordt met Conappt gedeeld. Je contact kan deze niet bekijken. Je gespreksgeschiedenis wordt niet meegestuurd.</span></p>'+errorLine+
     '<div class="dialog-actions">'+button('Annuleren','close-dialog','',true)+'<button class="button" type="submit">Melding versturen</button></div></form>');
 }
-async function send(id,title,text,pendingId) {
-  if(sending)return;
+async function send(id,title,text,pendingId,replyOptions=[]) {
+  if(sending)return false;
   sending=true;composer();
   document.querySelectorAll('[data-action="quick-message"]').forEach(el=>el.disabled=true);
   try {
-    await client.send(id,title,text,pendingId);
+    await client.send(id,title,text,pendingId,replyOptions);
     drafts.delete(client.account.accountId+':'+id);
     if(dialog.open&&dialog.querySelector('#quick-action-form'))dialog.close();
     if(route().page==='gesprek'&&route().id===id)chat(id);
     toast('Bericht verstuurd naar Conappt.');
+    return true;
   } catch(error) {
     const form=dialog.querySelector('#quick-action-form')||document.querySelector('#reply-form');
     if(form)setError(form,error);else toast(error.message);
     thread(id);
+    return false;
   } finally {
     sending=false;composer();
     composer();
@@ -407,8 +413,22 @@ document.addEventListener('click',async event=>{
     else if(action==='quick-message') {
       const item=quickActions().find(item=>item.key===el.dataset.id);
       if(!item)return;
-      if(!item.fields.length){const message=messageFromAction(item);await send(route().id,message.title,message.text);}
+      if(!item.fields.length){const message=messageFromAction(item);await send(route().id,message.title,message.text,undefined,message.replyOptions);}
       else openDialog('<h2>'+html(item.label)+'</h2><form id="quick-action-form" data-id="'+item.key+'" data-contact="'+route().id+'">'+item.fields.map(f=>field(f.name,f.label,'',f.type,'required '+(f.type==='number'?'min="0" max="1000000" step="0.01"':'maxlength="200"'))).join('')+errorLine+'<div class="dialog-actions">'+closeButton()+'<button class="button" type="submit">Bericht versturen</button></div></form>');
+    } else if(action==='send-reply-option') {
+      if(business() || sending)return;
+      const id=route().id;
+      const message=messages(id).find(m=>m.id===el.dataset.messageId && !m.own);
+      if(!message || client.history.replyUsed?.includes(message.id) || contact(id)?.messagingBlocked)return;
+      const choice=validateReplyOptions(message.replyOptions)[Number(el.dataset.index)];
+      if(!choice)return;
+      el.closest('.message-reply-options')?.querySelectorAll('button').forEach(button=>button.disabled=true);
+      const sent=await send(id,'',choice.text);
+      if(sent){
+        client.history.replyUsed=[...(client.history.replyUsed||[]),message.id];
+        await client.saveHistory();
+        if(route().page==='gesprek'&&route().id===id)thread(id);
+      } else if(route().page==='gesprek'&&route().id===id)thread(id);
     } else if(action==='retry-message') {
       const pending=client.history.pending.find(item=>item.id===el.dataset.id);
       if(pending)await send(pending.contactId,pending.title,pending.text,pending.id);
@@ -516,8 +536,12 @@ document.addEventListener('submit',async event=>{
       dialog.close();editing=false;render();toast('Dit bedrijfsaccount is gesloten.');
     } else if(form.id==='quick-message-editor') {
       const key=form.dataset.key||'custom:'+crypto.randomUUID();
-      const entry={key,label:data.get('quick-label'),title:data.get('quick-title'),text:data.get('text')};
-      const quickMessages=quickActions().filter(q=>q.key!==key).map(({key,label,title,text})=>({key,label,title,text}));
+      const replyOptions=data.get('reply-type')==='replies'?[0,1,2].map(i=>({
+        label:String(data.get('reply-label-'+i)||'').trim(),text:String(data.get('reply-text-'+i)||'').trim()
+      })).filter(item=>item.label||item.text):[];
+      if(data.get('reply-type')==='replies'&&!replyOptions.length)throw new Error('Voeg minstens één antwoordknop toe.');
+      const entry={key,label:data.get('quick-label'),title:data.get('quick-title'),text:data.get('text'),replyOptions:validateReplyOptions(replyOptions)};
+      const quickMessages=quickActions().filter(q=>q.key!==key).map(({key,label,title,text,replyOptions})=>({key,label,title,text,replyOptions}));
       quickMessages.push(entry);
       await client.update({quickMessages});dialog.close();refreshQuickPanel();toast('Snelbericht opgeslagen.');
     } else if(form.id==='conversation-note-form') {
@@ -536,7 +560,7 @@ document.addEventListener('submit',async event=>{
     else if(form.id==='quick-action-form') {
       const action=quickActions().find(item=>item.key===form.dataset.id);
       const message=messageFromAction(action,Object.fromEntries(data));
-      await send(form.dataset.contact,message.title,message.text);
+      await send(form.dataset.contact,message.title,message.text,undefined,message.replyOptions);
     } else if(form.id==='report-form') {
       const reason=data.get('reason'),details=data.get('details').trim();
       const error=validateReport(reason,details);if(error)throw new Error(error);
@@ -604,4 +628,10 @@ startBenchmarkLabel(document.querySelector('#benchmark-status'));
 
 
 // Keep closed-day time controls disabled; the browser supplies its native time picker.
-document.addEventListener('change', event => syncOpeningHours(event.target));
+document.addEventListener('change', event => {
+  syncOpeningHours(event.target);
+  if(event.target?.id==='quick-type'){
+    const editor=document.querySelector('#reply-option-editor');
+    if(editor)editor.hidden=event.target.value!=='replies';
+  }
+});
