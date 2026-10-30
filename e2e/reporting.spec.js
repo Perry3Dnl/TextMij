@@ -50,7 +50,7 @@ test('two devices connect by a real QR scan, exchange messages, and report priva
   await expect(business.locator('#message-thread')).toContainText('Dank je, ik kom vanmiddag langs.');
 
   // Interactive business messages are delivered encrypted; clicking a choice sends a real customer reply.
-  await business.getByRole('button',{name:'Goedkeuring vragen',exact:true}).click();
+  await business.getByRole('button',{name:/Goedkeuring vragen/}).click();
   await business.getByLabel('Wat moet er gebeuren?').fill('APK');
   await business.getByLabel('Bedrag in euro').fill('150');
   await business.getByRole('button',{name:'Bericht versturen',exact:true}).click();
