@@ -19,7 +19,7 @@ const assets = new Map([
   ['/crypto.js', ['crypto.js', 'text/javascript']],
   ['/logo.js', ['logo.js', 'text/javascript']],
   ['/benchmark.js', ['benchmark.js', 'text/javascript']],
-  ...['bootstrap.js','live-app.js','opening-hours.js','session-ui.js','conversation-actions.js','client.js','device-store.js','contact-code.js','icons.js','business-templates.js','qr.js','report-options.js','vendor/qrcodegen.js','vendor/jsQR.js'].map(file => ['/'+file,[file,'text/javascript']]),
+  ...['bootstrap.js','live-app.js','interactive-replies.js','opening-hours.js','session-ui.js','conversation-actions.js','client.js','device-store.js','contact-code.js','icons.js','business-templates.js','qr.js','report-options.js','vendor/qrcodegen.js','vendor/jsQR.js'].map(file => ['/'+file,[file,'text/javascript']]),
   ['/live.css', ['live.css','text/css']],
   ['/icon.svg', ['icon.svg', 'image/svg+xml']],
 ].map(([path, [file, type]]) => [path, {

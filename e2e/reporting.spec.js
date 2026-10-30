@@ -49,6 +49,20 @@ test('two devices connect by a real QR scan, exchange messages, and report priva
   await customer.getByRole('button',{name:'Bericht versturen',exact:true}).click();
   await expect(business.locator('#message-thread')).toContainText('Dank je, ik kom vanmiddag langs.');
 
+  // Interactive business messages are delivered encrypted; clicking a choice sends a real customer reply.
+  await business.getByRole('button',{name:/Goedkeuring vragen/}).click();
+  await business.getByLabel('Wat moet er gebeuren?').fill('APK');
+  await business.getByLabel('Bedrag in euro').fill('150');
+  await business.locator('#quick-action-form').getByRole('button',{name:'Bericht versturen',exact:true}).click();
+  await expect(customer.locator('#message-thread')).toContainText('Goedkeuring nodig');
+  const choices=customer.locator('#message-thread .message-reply-options');
+  await expect(choices.last().getByRole('button')).toHaveCount(3);
+  await choices.last().getByRole('button',{name:'Ja',exact:true}).click();
+  await expect(customer.locator('#message-thread')).toContainText('Ja, ik ga akkoord.');
+  await expect(business.locator('#message-thread')).toContainText('Ja, ik ga akkoord.');
+  await expect(choices.last().getByRole('button',{name:'Ja',exact:true})).toBeDisabled();
+
+
   await customer.getByRole('link',{name:'Garage Testbedrijf',exact:true}).click();
   await customer.getByRole('button',{name:'Bedrijf melden',exact:true}).click();
   await customer.getByLabel('Doet zich voor als een ander bedrijf',{exact:true}).check();
