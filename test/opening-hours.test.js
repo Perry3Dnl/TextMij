@@ -37,3 +37,17 @@ test('invalid time values cannot be saved',()=>{
   }};
   assert.throws(()=>readOpeningHours(root),/geldige begin- en eindtijd/);
 });
+
+test('HTTP server serves the shared opening-hours JavaScript module', async () => {
+  const { createApp } = await import('../src/app.js');
+  const server = createApp({ revision: 'opening-hours-test' });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const response = await fetch('http://127.0.0.1:'+server.address().port+'/opening-hours.js');
+    assert.equal(response.status,200);
+    assert.match(response.headers.get('content-type'),/javascript/);
+    assert.match(await response.text(),/function openingHoursFields/);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+  }
+});
