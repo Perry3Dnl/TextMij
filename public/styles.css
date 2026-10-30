@@ -696,3 +696,14 @@ body.business-dark-theme .app-dialog .button.secondary {
   color: #f3f7f4;
 }
 body.business-dark-theme .app-dialog .button.secondary:hover { background: #35443a; }
+
+/* Native opening-hours controls for business profiles. */
+.company-hour-editor{min-width:0;padding:12px;border:1px solid var(--border, #d1d5d2);border-radius:12px}
+.company-hour-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:600;margin-bottom:10px}
+.company-hour-toggle{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:400;white-space:nowrap}
+.company-hour-toggle input{width:17px;height:17px;accent-color:var(--accent, #3e6544)}
+.company-hour-time-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.company-hour-time-row label{min-width:0;font-size:13px}
+.company-hour-time-row input[type=time]{display:block;width:100%;min-width:0;margin-top:5px;box-sizing:border-box}
+.company-hour-time-row input:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:420px){.company-hour-time-row{grid-template-columns:1fr}}
