@@ -1,3 +1,4 @@
+import { validateReplyOptions } from './interactive-replies.js';
 // Client-side prototype: recipient confidentiality with WebCrypto P-256 ECDH + HKDF + AES-GCM.
 // IMPORTANT: no sender authentication or recipient key transparency yet. Do not label production E2EE.
 const subtle = globalThis.crypto?.subtle;
@@ -33,7 +34,7 @@ export async function exportDevicePublicKey(publicKey) {
   assertCrypto();
   return b64(await subtle.exportKey('raw', publicKey));
 }
-export async function encryptForRecipient({ senderId, recipientId, recipientPublicKey, title, text, image, keyVersion = 1, allowEmptyTitle = false }) {
+export async function encryptForRecipient({ senderId, recipientId, recipientPublicKey, title, text, image, keyVersion = 1, allowEmptyTitle = false, replyOptions = [] }) {
   assertCrypto();
   const template = image === undefined ? 'title-text' : 'title-text-image';
   const aad = context({ senderId, recipientId, template, keyVersion });
@@ -42,7 +43,7 @@ export async function encryptForRecipient({ senderId, recipientId, recipientPubl
   const recipientKey = await subtle.importKey('raw', unb64(recipientPublicKey), { name: 'ECDH', namedCurve: 'P-256' }, false, []);
   const nonce = random(12);
   const key = await derive(ephemeral.privateKey, recipientKey, nonce, aad);
-  const plaintext = bytes(JSON.stringify({ title, text }));
+  const plaintext = bytes(JSON.stringify({ title, text, ...(replyOptions?.length ? {replyOptions:validateReplyOptions(replyOptions)} : {}) }));
   const ciphertext = await subtle.encrypt({ name: 'AES-GCM', iv: nonce, additionalData: aad, tagLength: 128 }, key, plaintext);
   const envelope = { version: 1, recipientId, template, ciphertext: b64(ciphertext), nonce: b64(nonce),
     wrappedKey: b64(await subtle.exportKey('raw', ephemeral.publicKey)), keyVersion };
@@ -65,6 +66,7 @@ export async function decryptFromSender({ senderId, recipientId, privateKey, env
   const plaintext = await subtle.decrypt({ name: 'AES-GCM', iv: nonce, additionalData: aad, tagLength: 128 }, key, unb64(envelope.ciphertext));
   const message = JSON.parse(dec.decode(plaintext));
   if (typeof message.title !== 'string' || typeof message.text !== 'string') throw new TypeError('Invalid decrypted message');
+  message.replyOptions=validateReplyOptions(message.replyOptions);
   if (envelope.template === 'title-text-image') {
     const imageNonce = unb64(envelope.imageNonce);
     if (imageNonce.length !== 12) throw new TypeError('Invalid image nonce');
