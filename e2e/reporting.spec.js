@@ -19,10 +19,13 @@ test('two devices connect by a real QR scan, exchange messages, and report priva
   await business.getByRole('button',{name:'Start je bedrijf',exact:false}).click();
   await expect(business.getByRole('heading',{name:'Klantgesprekken',exact:true})).toBeVisible();
   await business.getByRole('button',{name:'Instellingen',exact:true}).click();
-  await business.getByRole('button',{name:'Bedrijfstemplate',exact:true}).click();
+  await business.getByRole('link',{name:'Bedrijfsprofiel bekijken',exact:true}).click();
+  await business.getByRole('button',{name:'Profiel bewerken',exact:true}).click();
+  await business.getByRole('button',{name:'Template toevoegen',exact:true}).click();
   await business.getByLabel('Zoek een bedrijfstemplate').fill('garage');
   await business.getByRole('button',{name:/Autogarage/}).click();
-  await business.getByRole('button',{name:'Instellingen sluiten',exact:true}).click();
+  await business.goto('/#gesprekken');
+  await expect(business.getByRole('heading',{name:'Klantgesprekken',exact:true})).toBeVisible();
 
   await business.evaluate(async image=>{
     const canvas=document.createElement('canvas');canvas.width=canvas.height=640;
