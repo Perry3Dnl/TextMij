@@ -368,3 +368,11 @@
   .session-app .conversation-bar:not([open]) .conversation-menu-panel,
   .session-app .conversation-bar[open] .conversation-menu-panel{transition:none}
 }
+
+/* Customer quick replies are part of the received encrypted message. */
+.message-reply-options{display:flex;flex-wrap:wrap;gap:8px;margin:13px 0 5px}
+.message-reply-button{min-height:38px;max-width:100%;white-space:normal;text-align:center;font-size:13px}
+.message-reply-button:disabled{opacity:.5;cursor:not-allowed}
+.reply-option-editor-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+#reply-option-editor[hidden]{display:none}
+@media(max-width:550px){.reply-option-editor-row{grid-template-columns:1fr}}
