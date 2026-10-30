@@ -53,7 +53,7 @@ test('two devices connect by a real QR scan, exchange messages, and report priva
   await business.getByRole('button',{name:/Goedkeuring vragen/}).click();
   await business.getByLabel('Wat moet er gebeuren?').fill('APK');
   await business.getByLabel('Bedrag in euro').fill('150');
-  await business.getByRole('button',{name:'Bericht versturen',exact:true}).click();
+  await business.locator('#quick-action-form').getByRole('button',{name:'Bericht versturen',exact:true}).click();
   await expect(customer.locator('#message-thread')).toContainText('Goedkeuring nodig');
   const choices=customer.locator('#message-thread .message-reply-options');
   await expect(choices.last().getByRole('button')).toHaveCount(3);
