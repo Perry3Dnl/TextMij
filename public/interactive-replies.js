@@ -9,7 +9,7 @@ export const APPROVAL_REPLIES = Object.freeze([
 
 export function validateReplyOptions(options) {
   if (options == null) return [];
-  if (!Array.isArray(options) || options.length < 1 || options.length > 3) throw new TypeError('Kies maximaal drie antwoordopties.');
+  if (!Array.isArray(options) || options.length > 3) throw new TypeError('Kies maximaal drie antwoordopties.');
   return options.map(option => {
     if (!option || typeof option !== 'object' || Array.isArray(option) ||
         typeof option.label !== 'string' || typeof option.text !== 'string') throw new TypeError('Ongeldige antwoordoptie.');
