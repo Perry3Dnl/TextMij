@@ -1,3 +1,4 @@
+import { APPROVAL_REPLIES,validateReplyOptions } from './interactive-replies.js';
 import { byteLength,validateBusinessMessage } from './model.js';
 // Industry starter packs: content only. They do not book appointments or take payments.
 const entries = [
@@ -99,7 +100,7 @@ export function searchIndustries(query = '') {
   return INDUSTRIES.filter(item => words.every(word => searchable([item.label,item.category,item.aliases].join(' ')).includes(word)));
 }
 
-const action = (id,label,title,text,fields=[]) => ({ id,label,title,text,fields });
+const action = (id,label,title,text,fields=[],replyOptions=[]) => ({ id,label,title,text,fields,replyOptions });
 const appointment = subject => action('appointment','Afspraak bevestigen','Afspraak bevestigd',
   'Je ' + subject + ' staat gepland op {date} om {time}. Komt er iets tussen? Laat het ons hier weten.',
   [{name:'date',label:'Datum',type:'date'},{name:'time',label:'Tijd',type:'time'}]);
@@ -113,7 +114,7 @@ export function quickActionsFor(industryId) {
     action('working','In de werkplaats','We zijn bezig met je auto','Je auto staat in de werkplaats. We houden je hier op de hoogte van de voortgang.'),
     action('approval','Goedkeuring vragen','Goedkeuring nodig',
       'Tijdens het nakijken vonden we het volgende: {details}\n\nDe extra kosten zijn €{amount}. Wil je hier laten weten of je akkoord gaat voordat we verdergaan?',
-      [{name:'details',label:'Wat moet er gebeuren?',type:'text'},{name:'amount',label:'Bedrag in euro',type:'number'}]),
+      [{name:'details',label:'Wat moet er gebeuren?',type:'text'},{name:'amount',label:'Bedrag in euro',type:'number'}],APPROVAL_REPLIES),
     action('parts','Wachten op onderdelen','Onderdelen besteld','We wachten op onderdelen voor je auto. Zodra we verder kunnen, krijg je hier een update.'),
     appointment('afspraak'),
     action('delay','Vertraging melden','Update over je auto','Het werk aan je auto duurt langer dan verwacht. We laten je hier weten zodra we een nieuwe planning hebben.'),
@@ -154,7 +155,7 @@ export function quickMessageCollection(industryId, saved) {
   if (Array.isArray(saved)) return saved.map(item => {
     const [source,id]=item.key.split(':');
     const original=quickActionsFor(source).find(action=>action.id===id);
-    return {...item,fields:(original?.fields||[]).filter(field=>item.text.includes('{'+field.name+'}'))};
+    return {...item,replyOptions:item.replyOptions===undefined?(original?.replyOptions||[]):item.replyOptions,fields:(original?.fields||[]).filter(field=>item.text.includes('{'+field.name+'}'))};
   });
   return quickActionsFor(industryId).map(item=>({...item,key:industryId+':'+item.id}));
 }
@@ -186,6 +187,7 @@ export function validateQuickMessageCollection(saved) {
     if(byteLength(value.title)+byteLength(value.text)>1024)
       throw new TypeError('Titel en bericht mogen samen maximaal 1024 bytes zijn.');
     if(validateBusinessMessage(value.title,value.text))throw new TypeError('Ongeldig snelbericht.');
+    value.replyOptions=validateReplyOptions(item.replyOptions);
     keys.add(item.key);result.push(value);
   }
   return result;
@@ -202,5 +204,5 @@ export function messageFromAction(action, values = {}) {
     const display = field.type === 'date' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value.split('-').reverse().join('-') : value;
     text = text.replaceAll('{' + field.name + '}',display);
   }
-  return { title:action.title, text };
+  return { title:action.title, text,replyOptions:validateReplyOptions(action.replyOptions) };
 }
