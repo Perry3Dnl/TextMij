@@ -1,9 +1,9 @@
 import { PROFILE_DAYS,escapeHtml } from './model.js';
 
-const VALID_TIME = /^(?:[01]\\d|2[0-3]):[0-5]\\d$/;
+const VALID_TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 export function parseOpeningHours(value) {
   const raw = typeof value === 'string' ? value.trim() : '';
-  const match = raw.match(/^([0-2]\\d:[0-5]\\d)\\s*[-–—]\\s*([0-2]\\d:[0-5]\\d)$/);
+  const match = raw.match(/^([0-2]\d:[0-5]\d)\s*[-–—]\s*([0-2]\d:[0-5]\d)$/);
   if (match && VALID_TIME.test(match[1]) && VALID_TIME.test(match[2]))
     return { open: true, start: match[1], end: match[2] };
   return { open: false, start: '09:00', end: '17:00' };
