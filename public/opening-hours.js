@@ -28,7 +28,7 @@ export function syncOpeningHours(target) {
 
 export function readOpeningHours(root = document) {
   return Object.fromEntries(PROFILE_DAYS.map(day => {
-    const open = root.getElementById ? root.querySelector('[data-hours-open="'+day+'"]') : null;
+    const open = root.querySelector('[data-hours-open="'+day+'"]');
     if (!open?.checked) return [day, 'Gesloten'];
     const start = root.querySelector('[id="hours-start-'+day+'"]')?.value;
     const end = root.querySelector('[id="hours-end-'+day+'"]')?.value;
