@@ -1,3 +1,4 @@
+import { openingHoursFields,readOpeningHours,syncOpeningHours } from './opening-hours.js';
 import { conversationPreference,conversationExport,downloadConversation,previewConversationBlocked } from './conversation-actions.js';
 import { icon as actionIcon } from './icons.js';
 import { REPORT_REASONS,USER_REPORT_REASONS,validateReport } from './report-options.js';
@@ -231,7 +232,7 @@ function businessProfileEditor() {
   return `<section class="card settings-card" id="public-company-profile-settings"><div class="settings-section-heading"><h2>Openbaar bedrijfsprofiel</h2><p>Bouw je profiel op met overzichtelijke onderdelen. Alleen ingevulde informatie wordt getoond.</p></div><form class="company-profile-form" id="company-public-form">
   <section class="company-editor-panel"><h3>Presentatie</h3><p>Laat klanten direct zien wie je bent.</p><div class="company-brand-editor"><div class="company-logo-editor"><label class="company-logo-tile" for="company-logo" aria-label="Bedrijfslogo kiezen of wijzigen">${profile.logo ? `<img src="${profile.logo}" alt="Huidig bedrijfslogo">` : `<span class="company-logo-initial">${html(Array.from(state.business.name)[0]?.toUpperCase() || 'B')}</span>`}<span class="company-logo-edit">${icon('edit')} Bewerken</span></label><input class="sr-only" id="company-logo" type="file" accept="image/*"><span id="company-logo-feedback" class="company-logo-caption" role="status">${profile.logo ? 'Logo ingesteld' : 'Geen logo ingesteld'}</span><button type="button" class="company-logo-remove text-link plain-button" data-action="remove-company-logo" ${profile.logo ? '' : 'hidden'}>Logo verwijderen</button></div><div class="company-description-editor"><label class="field-label" for="company-description">Bedrijfsbeschrijving</label><textarea class="text-input" id="company-description" maxlength="500" rows="5" placeholder="Vertel kort wie jullie zijn en hoe jullie klanten helpen.">${html(profile.description)}</textarea><p class="field-help">Elke ondersteunde afbeelding wordt vierkant uitgesneden en verkleind tot maximaal 100 KB.</p></div></div></section>
   <details class="company-editor-panel" open><summary>Contactgegevens <span>Telefoon, website en sociale media</span></summary><div class="company-panel-fields">${input('company-phone','Telefoonnummer',profile.phone,'Optioneel')}${input('company-website','Website (https://)',profile.website,'https://...')}${['instagram','facebook','linkedin'].map(key=>input('social-'+key,key,profile.socials[key],'https://...')).join('')}</div></details>
-  <details class="company-editor-panel"><summary>Openingstijden <span>Stel de tijden per dag in</span></summary><div class="company-hour-fields">${PROFILE_DAYS.map(day=>`<div>${input('hours-'+day,day,profile.hours[day],'Bijv. 09:00–17:00 of Gesloten')}</div>`).join('')}</div></details>
+  <details class="company-editor-panel"><summary>Openingstijden <span>Stel de tijden per dag in</span></summary><div class="company-hour-fields">${openingHoursFields(profile.hours)}</div></details>
   <section class="company-editor-panel" id="company-action-settings"><div class="company-panel-heading"><div><h3>Actieknoppen</h3><p>Laat klanten iets regelen via jouw bestaande website of systeem.</p></div><button type="button" class="button secondary" data-action="add-profile-action" id="add-profile-action" ${profile.actions.length>=3?'disabled':''}>${icon('plus')} Actie toevoegen</button></div><div class="action-editors" id="profile-action-editors">${profile.actions.map((action,i)=>actionRow(i,action)).join('')}${profile.actions.length===0?'<p class="action-empty">Nog geen actieknoppen. Voeg bijvoorbeeld ‘Reserveren’ of ‘Afspraak maken’ toe.</p>':''}</div><p class="field-help">Maximaal 3 knoppen. Elke knop opent een externe HTTPS-link.</p></section>
   <div class="company-form-footer"><button class="button" type="submit">Bedrijfsprofiel opslaan</button><p class="form-error" id="company-profile-error" role="alert" hidden></p></div></form></section>`;
 }
@@ -549,7 +550,7 @@ document.addEventListener('submit', (event) => {
     if (!isBusiness()) return;
     const value=id=>document.getElementById(id).value;
     const actions=Array.from(document.querySelectorAll('#profile-action-editors .action-editor')).map((row,i)=>({label:value('action-label-'+i),url:value('action-url-'+i)}));
-    const profile=cleanBusinessProfile({ ...state.business.profile, description:value('company-description'),phone:value('company-phone'),website:value('company-website'),socials:Object.fromEntries(['instagram','facebook','linkedin'].map(k=>[k,value('social-'+k)])),hours:Object.fromEntries(PROFILE_DAYS.map(d=>[d,value('hours-'+d)])),actions });
+    const profile=cleanBusinessProfile({ ...state.business.profile, description:value('company-description'),phone:value('company-phone'),website:value('company-website'),socials:Object.fromEntries(['instagram','facebook','linkedin'].map(k=>[k,value('social-'+k)])),hours:readOpeningHours(event.target),actions });
     state.business.profile=profile;const saved=persist();editingCompanyProfile=false;render(true);if(saved)toast('Bedrijfsprofiel opgeslagen op dit apparaat.');
   } else if (event.target.id === 'business-theme-form') {
     event.preventDefault();
@@ -627,3 +628,6 @@ if (!location.hash) history.replaceState(null, '', '#gesprekken');
 render();
 startBenchmarkLabel(document.querySelector('#benchmark-status'));
 
+
+// Keep closed-day time controls disabled; the browser supplies its native time picker.
+document.addEventListener('change', event => syncOpeningHours(event.target));

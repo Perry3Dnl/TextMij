@@ -1,3 +1,4 @@
+import { openingHoursFields,readOpeningHours,syncOpeningHours } from './opening-hours.js';
 import { conversationExport,downloadConversation } from './conversation-actions.js';
 import { showSettings,closeSettings,settingsDialog } from './session-ui.js';
 import { ConapptClient } from './client.js';
@@ -238,7 +239,7 @@ function profileEditor(item,p) {
     '<label class="field-label" for="company-description">Beschrijving</label><textarea class="text-input" id="company-description" name="description" rows="4" maxlength="500">'+html(p.description)+'</textarea></div></div><p class="field-help" id="logo-feedback">Afbeeldingen worden vierkant uitgesneden en verkleind tot maximaal 100 KB</p>'+'</section>'+
     '<details class="card company-editor-panel"><summary>Contactgegevens</summary>'+field('company-phone','Telefoonnummer (optioneel)',p.phone)+field('company-website','Website (optioneel)',p.website,'url')+
     ['instagram','facebook','linkedin'].map(key=>field('social-'+key,key,p.socials[key],'url')).join('')+'</details>'+
-    '<details class="card company-editor-panel"><summary>Openingstijden</summary><div class="company-hour-fields">'+PROFILE_DAYS.map(day=>'<div>'+field('hours-'+day,day,p.hours[day])+'</div>').join('')+'</div></details>'+
+    '<details class="card company-editor-panel"><summary>Openingstijden</summary><div class="company-hour-fields">'+openingHoursFields(p.hours)+'</div></details>'+
     quickPanel()+
     '<section class="card company-editor-panel"><h2>Externe actieknoppen</h2><p class="field-help">Optioneel. Bijvoorbeeld een link naar je reserveringspagina.</p><div id="external-action-list">'+
     p.actions.map((a,i)=>'<details class="live-action-editor" open><summary>'+html(a.label)+'</summary>'+field('action-label-'+i,'Knoptekst',a.label,'text','maxlength="35"')+field('action-url-'+i,'Link (https://)',a.url,'url')+'</details>').join('')+
@@ -553,7 +554,7 @@ document.addEventListener('submit',async event=>{
       if(actions.some(a=>Boolean(a.label)!==Boolean(a.url)))throw new Error('Vul voor iedere actie een knoptekst én link in.');
       const profile=cleanBusinessProfile({logo:logoDraft,description:value('company-description'),phone:value('company-phone'),website:value('company-website'),
         socials:Object.fromEntries(['instagram','facebook','linkedin'].map(k=>[k,value('social-'+k)])),
-        hours:Object.fromEntries(PROFILE_DAYS.map(day=>[day,value('hours-'+day)])),actions});
+        hours:readOpeningHours(form),actions});
       await client.update({name:value('company-name'),profile});editing=false;render();toast('Bedrijfsprofiel opgeslagen.');
     } else if(form.id==='personal-profile') {
       await client.update({name:data.get('personal-name').trim()||'Conappt-gebruiker'});navigation();toast('Je profiel is opgeslagen.');
@@ -601,3 +602,6 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refre
 
 startBenchmarkLabel(document.querySelector('#benchmark-status'));
 
+
+// Keep closed-day time controls disabled; the browser supplies its native time picker.
+document.addEventListener('change', event => syncOpeningHours(event.target));

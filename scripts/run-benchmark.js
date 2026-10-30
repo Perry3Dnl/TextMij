@@ -28,7 +28,9 @@ try {
   await page.reload({ waitUntil: 'networkidle' });
   const label = page.locator('#benchmark-status');
   await label.waitFor();
-  if (!(await label.textContent()).includes(new Intl.NumberFormat('nl-NL').format(result.completed))) throw new Error('Result missing from app footer');
+  const completedLabel = new Intl.NumberFormat('nl-NL').format(result.completed);
+  // The footer fetch is asynchronous after navigation; assert the published value once rendered.
+  await page.waitForFunction(expected => document.querySelector('#benchmark-status')?.textContent?.includes(expected), completedLabel, { timeout: 10_000 });
   // Use preserved example conversations for layout checks; never create production test accounts.
   // Live conversation layout is also covered by the isolated browser-flow tests.
   for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }, { width: 390, height: 844 }]) {
