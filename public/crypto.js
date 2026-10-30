@@ -66,7 +66,7 @@ export async function decryptFromSender({ senderId, recipientId, privateKey, env
   const plaintext = await subtle.decrypt({ name: 'AES-GCM', iv: nonce, additionalData: aad, tagLength: 128 }, key, unb64(envelope.ciphertext));
   const message = JSON.parse(dec.decode(plaintext));
   if (typeof message.title !== 'string' || typeof message.text !== 'string') throw new TypeError('Invalid decrypted message');
-  message.replyOptions=validateReplyOptions(message.replyOptions);
+  if (message.replyOptions !== undefined) message.replyOptions=validateReplyOptions(message.replyOptions);
   if (envelope.template === 'title-text-image') {
     const imageNonce = unb64(envelope.imageNonce);
     if (imageNonce.length !== 12) throw new TypeError('Invalid image nonce');
