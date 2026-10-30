@@ -1,3 +1,4 @@
+import { validateReplyOptions } from './interactive-replies.js';
 import { conversationPreference } from './conversation-actions.js';
 import { deviceGet,deviceSet } from './device-store.js';
 import { generateDeviceKeyPair,exportDevicePublicKey,encryptForRecipient,decryptFromSender } from './crypto.js';
@@ -120,23 +121,25 @@ export class ConapptClient {
     await deviceSet('public-profile:'+this.role,updated);
     return updated;
   }
-  async send(contactId,title,text,pendingId) {
+  async send(contactId,title,text,pendingId,replyOptions=[]) {
+    if(this.role!=='business' && replyOptions?.length)throw new Error('Alleen bedrijven kunnen antwoordopties toevoegen.');
+    replyOptions=validateReplyOptions(replyOptions);
     const error=this.role==='business'?validateBusinessMessage(title,text,undefined,false):validateReply(text);
     if(error) throw new Error(error);
     const contact=this.contacts.find(item=>item.accountId===contactId);
     if(contact?.messagingBlocked)throw new Error('Dit gesprek is geblokkeerd.');
     if(!contact) throw new Error('Dit gesprek is niet gevonden. Open je gesprekken opnieuw.');
     const account=this.account,role=this.role,history=this.history;
-    let pending=pendingId ? history.pending.find(item=>item.id===pendingId) : history.pending.find(item=>item.contactId===contactId && item.title===title && item.text===text);
+    let pending=pendingId ? history.pending.find(item=>item.id===pendingId) : history.pending.find(item=>item.contactId===contactId && item.title===title && item.text===text && JSON.stringify(item.replyOptions||[])===JSON.stringify(replyOptions));
     if(!pending) {
-      pending={id:crypto.randomUUID(),contactId,title,text,at:Date.now(),envelope:await encryptForRecipient({
-        senderId:account.accountId,recipientId:contactId,recipientPublicKey:contact.publicKey,title,text,keyVersion:contact.keyVersion,allowEmptyTitle:!title.trim()
+      pending={id:crypto.randomUUID(),contactId,title,text,replyOptions,at:Date.now(),envelope:await encryptForRecipient({
+        senderId:account.accountId,recipientId:contactId,recipientPublicKey:contact.publicKey,title,text,replyOptions,keyVersion:contact.keyVersion,allowEmptyTitle:!title.trim()
       })};
       history.pending.push(pending);
       await deviceSet('history:'+account.accountId,history);
     }
     const result=await this.request('messages',{method:'POST',role,body:{idempotencyKey:pending.id,envelope:pending.envelope}});
-    history.messages.push({id:'sent-'+result.messageId,contactId,own:true,title:pending.title,text:pending.text,at:pending.at});
+    history.messages.push({id:'sent-'+result.messageId,contactId,own:true,title:pending.title,text:pending.text,replyOptions:pending.replyOptions||[],at:pending.at});
     history.pending=history.pending.filter(item=>item.id!==pending.id);
     await deviceSet('history:'+account.accountId,history);
   }
